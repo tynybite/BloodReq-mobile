@@ -17,7 +17,7 @@ class _MainShellState extends State<MainShell> {
 
   final List<_NavItem> _navItems = [
     _NavItem(
-      icon: Icons.home_rounded,
+      icon: Icons.home_outlined,
       activeIcon: Icons.home_rounded,
       label: 'Home',
       path: '/home',
@@ -31,14 +31,8 @@ class _MainShellState extends State<MainShell> {
     _NavItem(
       icon: Icons.volunteer_activism_outlined,
       activeIcon: Icons.volunteer_activism,
-      label: 'Fund',
+      label: 'Funds',
       path: '/fundraisers',
-    ),
-    _NavItem(
-      icon: Icons.leaderboard_outlined,
-      activeIcon: Icons.leaderboard,
-      label: 'Leaders',
-      path: '/leaderboard',
     ),
     _NavItem(
       icon: Icons.person_outline,
@@ -52,84 +46,98 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: widget.child,
+      extendBody: true,
       bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // White pill with nav items
+            Expanded(
+              child: Container(
+                height: 68,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(34),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(
+                    _navItems.length,
+                    (index) => _buildNavItem(index),
+                  ),
+                ),
+              ),
             ),
+
+            const SizedBox(width: 12),
+
+            // Plus button
+            _buildPlusButton(),
           ],
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(_navItems.length, (index) {
-                final item = _navItems[index];
-                final isSelected = _selectedIndex == index;
-
-                return _buildNavItem(
-                  item: item,
-                  isSelected: isSelected,
-                  onTap: () {
-                    setState(() => _selectedIndex = index);
-                    context.go(item.path);
-                  },
-                );
-              }),
-            ),
-          ),
-        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/create-request'),
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
-  Widget _buildNavItem({
-    required _NavItem item,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildNavItem(int index) {
+    final item = _navItems[index];
+    final isSelected = _selectedIndex == index;
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        setState(() => _selectedIndex = index);
+        context.go(item.path);
+      },
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withOpacity(0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isSelected ? item.activeIcon : item.icon,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-              size: 24,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Icon (no background)
+          Icon(
+            isSelected ? item.activeIcon : item.icon,
+            color: isSelected ? AppColors.primary : AppColors.textTertiary,
+            size: 26,
+          ),
+          const SizedBox(height: 4),
+          // Label
+          Text(
+            item.label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              color: isSelected ? AppColors.primary : AppColors.textTertiary,
             ),
-            const SizedBox(height: 4),
-            Text(
-              item.label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
-              ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlusButton() {
+    return GestureDetector(
+      onTap: () => context.push('/create-request'),
+      child: Container(
+        width: 54,
+        height: 54,
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
     );
   }

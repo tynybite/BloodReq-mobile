@@ -96,11 +96,6 @@ class RouterService {
                 const NoTransitionPage(child: FundraisersScreen()),
           ),
           GoRoute(
-            path: '/leaderboard',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: LeaderboardScreen()),
-          ),
-          GoRoute(
             path: '/profile',
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: ProfileScreen()),
@@ -119,6 +114,10 @@ class RouterService {
           final id = state.pathParameters['id']!;
           return RequestDetailScreen(requestId: id);
         },
+      ),
+      GoRoute(
+        path: '/leaderboard',
+        builder: (context, state) => const LeaderboardScreen(),
       ),
       GoRoute(
         path: '/notifications',

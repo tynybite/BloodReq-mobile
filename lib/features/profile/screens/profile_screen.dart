@@ -18,7 +18,7 @@ class ProfileScreen extends StatelessWidget {
         title: const Text('Profile'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_outlined),
             onPressed: () => context.push('/settings'),
           ),
         ],
@@ -27,19 +27,26 @@ class ProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Profile Header
+            // Profile Header Card
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                gradient: AppGradients.cardGradient,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.border.withOpacity(0.5)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
+                  // Avatar
                   CircleAvatar(
                     radius: 48,
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                     child: Text(
                       user?.initials ?? 'U',
                       style: TextStyle(
@@ -50,6 +57,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  // Name
                   Text(
                     user?.fullName ?? 'User',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -57,26 +65,28 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
+                  // Email
                   Text(
                     user?.email ?? '',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+                  // Stats Row
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _StatBadge(
                         label: 'Blood Type',
                         value: user?.bloodGroup ?? 'O+',
                         color: AppColors.primary,
                       ),
-                      const SizedBox(width: 12),
+                      Container(width: 1, height: 40, color: AppColors.border),
                       _StatBadge(
                         label: 'Donations',
                         value: '${user?.totalDonations ?? 0}',
                         color: AppColors.success,
                       ),
-                      const SizedBox(width: 12),
+                      Container(width: 1, height: 40, color: AppColors.border),
                       _StatBadge(
                         label: 'Points',
                         value: '${user?.points ?? 0}',
@@ -113,11 +123,15 @@ class ProfileScreen extends StatelessWidget {
               },
             ),
             _MenuItem(
+              icon: Icons.leaderboard_outlined,
+              title: 'Leaderboard',
+              subtitle: 'View top donors',
+              onTap: () => context.push('/leaderboard'),
+            ),
+            _MenuItem(
               icon: Icons.notifications_outlined,
-              title: 'Notification Preferences',
-              onTap: () {
-                // TODO: Navigate to notification settings
-              },
+              title: 'Notifications',
+              onTap: () => context.push('/notifications'),
             ),
             _MenuItem(
               icon: Icons.help_outline,
@@ -150,6 +164,8 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
+
+            const SizedBox(height: 100), // Bottom padding for navbar
           ],
         ),
       ),
@@ -170,28 +186,22 @@ class _StatBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: color,
-            ),
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: color,
           ),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+      ],
     );
   }
 }
@@ -199,11 +209,13 @@ class _StatBadge extends StatelessWidget {
 class _MenuItem extends StatelessWidget {
   final IconData icon;
   final String title;
+  final String? subtitle;
   final VoidCallback onTap;
 
   const _MenuItem({
     required this.icon,
     required this.title,
+    this.subtitle,
     required this.onTap,
   });
 
@@ -212,13 +224,28 @@ class _MenuItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: ListTile(
-        leading: Icon(icon, color: AppColors.textSecondary),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppColors.textSecondary, size: 20),
+        ),
         title: Text(title),
+        subtitle: subtitle != null ? Text(subtitle!) : null,
         trailing: const Icon(
           Icons.chevron_right,
           color: AppColors.textTertiary,
