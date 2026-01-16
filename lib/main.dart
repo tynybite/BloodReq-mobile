@@ -7,6 +7,7 @@ import 'core/constants/theme_config.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/services/router_service.dart';
+import 'core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,8 +18,8 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // TODO: Initialize OneSignal
-  // OneSignal.initialize(OneSignalConfig.appId);
+  // Initialize push notifications
+  await NotificationService().initialize();
 
   runApp(const BloodReqApp());
 }

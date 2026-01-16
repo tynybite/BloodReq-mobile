@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_theme.dart';
+import '../../../core/providers/auth_provider.dart';
+import '../../../core/services/api_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,9 +16,12 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _pageController = PageController();
+  final _api = ApiService();
   int _currentStep = 0;
+  bool _isLoading = false;
 
   // Form data
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -22,6 +29,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _selectedBloodGroup = 'O+';
   String _selectedCountry = 'Bangladesh';
   String _selectedCity = 'Dhaka';
+
+  // Location data
+  List<Map<String, dynamic>> _countries = [];
+  List<Map<String, dynamic>> _cities = [];
+  bool _loadingLocations = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCountries();
+  }
 
   @override
   void dispose() {
@@ -31,6 +49,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCountries() async {
+    setState(() => _loadingLocations = true);
+
+    final response = await _api.get<List<dynamic>>(ApiEndpoints.countries);
+
+    if (response.success && response.data != null) {
+      setState(() {
+        _countries = (response.data as List)
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+        if (_countries.isNotEmpty) {
+          _selectedCountry = _countries.first['name'] ?? 'Bangladesh';
+          _loadCities(_selectedCountry);
+        }
+      });
+    }
+
+    setState(() => _loadingLocations = false);
+  }
+
+  Future<void> _loadCities(String country) async {
+    setState(() => _loadingLocations = true);
+
+    final response = await _api.get<List<dynamic>>(
+      ApiEndpoints.cities,
+      queryParams: {'country': country},
+    );
+
+    if (response.success && response.data != null) {
+      setState(() {
+        _cities = (response.data as List)
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+        if (_cities.isNotEmpty) {
+          _selectedCity = _cities.first['name'] ?? '';
+        }
+      });
+    }
+
+    setState(() => _loadingLocations = false);
   }
 
   void _nextStep() {
@@ -53,6 +113,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  Future<void> _handleRegister() async {
+    setState(() => _isLoading = true);
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.signUpWithEmail(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      fullName: _nameController.text.trim(),
+      phoneNumber: _phoneController.text.trim(),
+      bloodGroup: _selectedBloodGroup,
+      country: _selectedCountry,
+      city: _selectedCity,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (success && mounted) {
+      if (authProvider.isAuthenticated) {
+        context.go('/home');
+      } else {
+        // Email verification required
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please check your email to verify your account'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        context.go('/login');
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.error ?? 'Registration failed'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      authProvider.clearError();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -67,7 +167,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             }
           },
         ),
-        title: Text('Create Account'),
+        title: const Text('Create Account'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -112,76 +212,112 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _buildBasicInfoStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Basic Information',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tell us a little about yourself',
-            style: TextStyle(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 32),
-
-          TextFormField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Full Name',
-              prefixIcon: Icon(Icons.person_outline),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Basic Information',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
-          ),
-          const SizedBox(height: 16),
-
-          TextFormField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              prefixIcon: Icon(Icons.email_outlined),
+            const SizedBox(height: 8),
+            Text(
+              'Tell us a little about yourself',
+              style: TextStyle(color: AppColors.textSecondary),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 32),
 
-          TextFormField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: 'Phone Number',
-              prefixIcon: Icon(Icons.phone_outlined),
-              hintText: '+880 1XXX-XXXXXX',
+            TextFormField(
+              controller: _nameController,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Full Name',
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your name';
+                }
+                return null;
+              },
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          TextFormField(
-            controller: _passwordController,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'Password',
-              prefixIcon: Icon(Icons.lock_outlined),
+            TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your email';
+                }
+                if (!value.contains('@')) {
+                  return 'Please enter a valid email';
+                }
+                return null;
+              },
             ),
-          ),
-          const SizedBox(height: 32),
+            const SizedBox(height: 16),
 
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _nextStep,
-              child: const Text('Continue'),
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                prefixIcon: Icon(Icons.phone_outlined),
+                hintText: '+880 1XXX-XXXXXX',
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+
+            TextFormField(
+              controller: _passwordController,
+              obscureText: true,
+              textInputAction: TextInputAction.done,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                prefixIcon: Icon(Icons.lock_outlined),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a password';
+                }
+                if (value.length < 6) {
+                  return 'Password must be at least 6 characters';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 32),
+
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    _nextStep();
+                  }
+                },
+                child: const Text('Continue'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildBloodInfoStep() {
-    final bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    final bloodGroups = AppConstants.bloodGroups;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -250,6 +386,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           SizedBox(
             width: double.infinity,
+            height: 52,
             child: ElevatedButton(
               onPressed: _nextStep,
               child: const Text('Continue'),
@@ -279,62 +416,88 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           const SizedBox(height: 32),
 
+          // Country Dropdown
           DropdownButtonFormField<String>(
-            value: _selectedCountry,
-            decoration: const InputDecoration(
+            value: _countries.any((c) => c['name'] == _selectedCountry)
+                ? _selectedCountry
+                : null,
+            decoration: InputDecoration(
               labelText: 'Country',
-              prefixIcon: Icon(Icons.public),
+              prefixIcon: const Icon(Icons.public),
+              suffixIcon: _loadingLocations
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : null,
             ),
-            items: [
-              'Bangladesh',
-              'India',
-              'Pakistan',
-            ].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+            items: _countries.isEmpty
+                ? [
+                    const DropdownMenuItem(
+                      value: 'Bangladesh',
+                      child: Text('Bangladesh'),
+                    ),
+                  ]
+                : _countries
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c['name'] as String,
+                          child: Text(c['name'] as String),
+                        ),
+                      )
+                      .toList(),
             onChanged: (value) {
-              setState(() => _selectedCountry = value!);
+              if (value != null) {
+                setState(() => _selectedCountry = value);
+                _loadCities(value);
+              }
             },
           ),
           const SizedBox(height: 16),
 
+          // City Dropdown
           DropdownButtonFormField<String>(
-            value: _selectedCity,
+            value: _cities.any((c) => c['name'] == _selectedCity)
+                ? _selectedCity
+                : null,
             decoration: const InputDecoration(
               labelText: 'City',
               prefixIcon: Icon(Icons.location_city),
             ),
-            items: [
-              'Dhaka',
-              'Chittagong',
-              'Sylhet',
-              'Rajshahi',
-            ].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+            items: _cities.isEmpty
+                ? [const DropdownMenuItem(value: 'Dhaka', child: Text('Dhaka'))]
+                : _cities
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c['name'] as String,
+                          child: Text(c['name'] as String),
+                        ),
+                      )
+                      .toList(),
             onChanged: (value) {
-              setState(() => _selectedCity = value!);
+              if (value != null) {
+                setState(() => _selectedCity = value);
+              }
             },
-          ),
-          const SizedBox(height: 24),
-
-          // Detect Location Button
-          OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Implement location detection
-            },
-            icon: const Icon(Icons.my_location),
-            label: const Text('Detect My Location'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 48),
-            ),
           ),
           const SizedBox(height: 48),
 
           SizedBox(
             width: double.infinity,
+            height: 52,
             child: ElevatedButton(
-              onPressed: () {
-                // TODO: Complete registration
-                context.go('/home');
-              },
-              child: const Text('Create Account'),
+              onPressed: _isLoading ? null : _handleRegister,
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Create Account'),
             ),
           ),
 

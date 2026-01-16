@@ -7,14 +7,19 @@ import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
+import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/home/screens/main_shell.dart';
 import '../../features/blood_requests/screens/blood_requests_screen.dart';
 import '../../features/blood_requests/screens/create_request_screen.dart';
 import '../../features/blood_requests/screens/request_detail_screen.dart';
+import '../../features/blood_requests/screens/my_requests_screen.dart';
+import '../../features/blood_requests/screens/my_donations_screen.dart';
 import '../../features/fundraisers/screens/fundraisers_screen.dart';
+import '../../features/fundraisers/screens/fundraiser_detail_screen.dart';
 import '../../features/leaderboard/screens/leaderboard_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/profile/screens/edit_profile_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 
@@ -38,7 +43,8 @@ class RouterService {
       final isAuthRoute =
           state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
-          state.matchedLocation == '/onboarding';
+          state.matchedLocation == '/onboarding' ||
+          state.matchedLocation == '/forgot-password';
 
       // Still loading, show splash
       if (isLoading && state.matchedLocation != '/') {
@@ -73,6 +79,10 @@ class RouterService {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
 
       // Main App Shell with Bottom Navigation
@@ -126,6 +136,25 @@ class RouterService {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/fundraiser/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return FundraiserDetailScreen(fundraiserId: id);
+        },
+      ),
+      GoRoute(
+        path: '/my-requests',
+        builder: (context, state) => const MyRequestsScreen(),
+      ),
+      GoRoute(
+        path: '/my-donations',
+        builder: (context, state) => const MyDonationsScreen(),
       ),
     ],
     errorBuilder: (context, state) =>

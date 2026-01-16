@@ -14,15 +14,7 @@ class ProfileScreen extends StatelessWidget {
     final user = authProvider.user;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => context.push('/settings'),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Profile')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -31,7 +23,7 @@ class ProfileScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.cardBg,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -104,23 +96,22 @@ class ProfileScreen extends StatelessWidget {
             _MenuItem(
               icon: Icons.person_outline,
               title: 'Edit Profile',
-              onTap: () {
-                // TODO: Navigate to edit profile
-              },
+              onTap: () => context.push('/edit-profile'),
+            ),
+            _MenuItem(
+              icon: Icons.settings_outlined,
+              title: 'Settings',
+              onTap: () => context.push('/settings'),
             ),
             _MenuItem(
               icon: Icons.water_drop_outlined,
               title: 'My Blood Requests',
-              onTap: () {
-                // TODO: Navigate to my requests
-              },
+              onTap: () => context.push('/my-requests'),
             ),
             _MenuItem(
               icon: Icons.volunteer_activism_outlined,
               title: 'My Donations',
-              onTap: () {
-                // TODO: Navigate to my donations
-              },
+              onTap: () => context.push('/my-donations'),
             ),
             _MenuItem(
               icon: Icons.leaderboard_outlined,
@@ -163,6 +154,28 @@ class ProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
+            ),
+
+            const SizedBox(height: 40),
+
+            // TynyBite Labs Watermark
+            Column(
+              children: [
+                Text(
+                  'Developed by',
+                  style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'TynyBite Labs',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textSecondary,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 100), // Bottom padding for navbar
@@ -224,7 +237,7 @@ class _MenuItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardBg,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(

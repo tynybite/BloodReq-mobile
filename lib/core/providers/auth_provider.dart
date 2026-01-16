@@ -1,26 +1,24 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../constants/app_constants.dart';
+import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../../shared/models/user_model.dart';
 
 enum AuthStatus { initial, authenticated, unauthenticated, loading }
 
 class AuthProvider with ChangeNotifier {
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final ApiService _api = ApiService();
+  final NotificationService _notificationService = NotificationService();
 
   AuthStatus _status = AuthStatus.initial;
   UserModel? _user;
   String? _error;
-  String? _accessToken;
-  String? _refreshToken;
 
   AuthStatus get status => _status;
   UserModel? get user => _user;
   String? get error => _error;
-  String? get accessToken => _accessToken;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   bool get isLoading => _status == AuthStatus.loading;
 
@@ -28,25 +26,14 @@ class AuthProvider with ChangeNotifier {
     _checkAuthStatus();
   }
 
-  /// HTTP headers with auth token
-  Map<String, String> get _authHeaders => {
-    'Content-Type': 'application/json',
-    if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
-  };
-
   Future<void> _checkAuthStatus() async {
     _status = AuthStatus.loading;
     notifyListeners();
 
     try {
-      _accessToken = await _secureStorage.read(
-        key: AppConstants.accessTokenKey,
-      );
-      _refreshToken = await _secureStorage.read(
-        key: AppConstants.refreshTokenKey,
-      );
+      await _api.init();
 
-      if (_accessToken != null) {
+      if (_api.hasToken) {
         await _loadUserProfile();
         _status = AuthStatus.authenticated;
       } else {
@@ -62,37 +49,16 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _loadUserProfile() async {
     try {
-      final response = await http
-          .get(
-            Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.profile}'),
-            headers: _authHeaders,
-          )
-          .timeout(ApiConfig.timeout);
+      final response = await _api.get<Map<String, dynamic>>(
+        ApiEndpoints.profile,
+      );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true && data['data'] != null) {
-          _user = UserModel.fromJson(data['data']);
-        }
+      if (response.success && response.data != null) {
+        _user = UserModel.fromJson(response.data as Map<String, dynamic>);
       }
     } catch (e) {
       debugPrint('Error loading user profile: $e');
-      // Don't throw - just continue without profile
     }
-  }
-
-  /// Save tokens securely
-  Future<void> _saveTokens(String accessToken, String refreshToken) async {
-    _accessToken = accessToken;
-    _refreshToken = refreshToken;
-    await _secureStorage.write(
-      key: AppConstants.accessTokenKey,
-      value: accessToken,
-    );
-    await _secureStorage.write(
-      key: AppConstants.refreshTokenKey,
-      value: refreshToken,
-    );
   }
 
   /// Sign in with email and password
@@ -102,37 +68,116 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.signIn}'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
+      final response = await _api.post<Map<String, dynamic>>(
+        ApiEndpoints.signIn,
+        body: {'email': email, 'password': password},
       );
 
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        await _saveTokens(
-          data['data']['access_token'],
-          data['data']['refresh_token'],
+      if (response.success && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        await _api.saveTokens(
+          data['access_token'] ?? data['session']?['access_token'],
+          data['refresh_token'] ?? data['session']?['refresh_token'],
         );
 
-        if (data['data']['user'] != null) {
-          _user = UserModel.fromJson(data['data']['user']);
+        if (data['user'] != null) {
+          _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
         } else {
           await _loadUserProfile();
         }
 
         _status = AuthStatus.authenticated;
+
+        // Wire up OneSignal with user
+        _setupNotifications();
+
         notifyListeners();
         return true;
       }
 
-      _error = data['message'] ?? 'Sign in failed';
+      _error = response.message ?? 'Sign in failed';
       _status = AuthStatus.unauthenticated;
       notifyListeners();
       return false;
     } catch (e) {
       _error = e.toString();
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Sign in with Google
+  Future<bool> signInWithGoogle() async {
+    _status = AuthStatus.loading;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // Initialize Google Sign In with scopes
+      final googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
+        serverClientId:
+            '594682851513-ev5ejhuel68qgm7rtpis8t7vu1d4ql2s.apps.googleusercontent.com',
+      );
+
+      // Sign out first to ensure fresh account picker
+      await googleSignIn.signOut();
+
+      // Trigger the authentication flow
+      final googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        // User cancelled the sign-in
+        _status = AuthStatus.unauthenticated;
+        _error = 'Google sign in was cancelled';
+        notifyListeners();
+        return false;
+      }
+
+      // Obtain the auth details from the request
+      final googleAuth = await googleUser.authentication;
+
+      if (googleAuth.idToken == null) {
+        _error = 'Failed to get Google authentication token';
+        _status = AuthStatus.unauthenticated;
+        notifyListeners();
+        return false;
+      }
+
+      // Send the ID token to our backend for exchange with Supabase
+      final response = await _api.post<Map<String, dynamic>>(
+        ApiEndpoints.oauth,
+        body: {
+          'provider': 'google',
+          'id_token': googleAuth.idToken,
+          'access_token': googleAuth.accessToken,
+        },
+      );
+
+      if (response.success && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        await _api.saveTokens(data['access_token'], data['refresh_token']);
+
+        if (data['user'] != null) {
+          _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+        } else {
+          await _loadUserProfile();
+        }
+
+        _status = AuthStatus.authenticated;
+        _setupNotifications();
+        notifyListeners();
+        return true;
+      }
+
+      _error = response.message ?? 'Google sign in failed';
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      debugPrint('Google Sign In error: $e');
+      _error = 'Google sign in failed: ${e.toString()}';
       _status = AuthStatus.unauthenticated;
       notifyListeners();
       return false;
@@ -155,10 +200,9 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.signUp}'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await _api.post<Map<String, dynamic>>(
+        ApiEndpoints.signUp,
+        body: {
           'email': email,
           'password': password,
           'full_name': fullName,
@@ -166,18 +210,20 @@ class AuthProvider with ChangeNotifier {
           'blood_group': bloodGroup,
           'country': country,
           'city': city,
-          'area': area,
-        }),
+          if (area != null) 'area': area,
+        },
       );
 
-      final data = jsonDecode(response.body);
+      if (response.success && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
 
-      if (response.statusCode == 200 && data['success'] == true) {
         // If session is returned, save tokens
-        if (data['data']['access_token'] != null) {
-          await _saveTokens(
-            data['data']['access_token'],
-            data['data']['refresh_token'],
+        final accessToken =
+            data['access_token'] ?? data['session']?['access_token'];
+        if (accessToken != null) {
+          await _api.saveTokens(
+            accessToken,
+            data['refresh_token'] ?? data['session']?['refresh_token'],
           );
           await _loadUserProfile();
           _status = AuthStatus.authenticated;
@@ -190,7 +236,7 @@ class AuthProvider with ChangeNotifier {
         return true;
       }
 
-      _error = data['message'] ?? 'Sign up failed';
+      _error = response.message ?? 'Sign up failed';
       _status = AuthStatus.unauthenticated;
       notifyListeners();
       return false;
@@ -209,17 +255,15 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.signInPhone}'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'phone_number': phoneNumber}),
+      final response = await _api.post(
+        ApiEndpoints.signInPhone,
+        body: {'phone_number': phoneNumber},
       );
 
-      final data = jsonDecode(response.body);
       _status = AuthStatus.unauthenticated;
       notifyListeners();
 
-      return response.statusCode == 200 && data['success'] == true;
+      return response.success;
     } catch (e) {
       _error = e.toString();
       _status = AuthStatus.unauthenticated;
@@ -235,30 +279,21 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.verifyOtp}'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'phone_number': phoneNumber,
-          'otp': otp,
-          'type': 'signin',
-        }),
+      final response = await _api.post<Map<String, dynamic>>(
+        ApiEndpoints.verifyOtp,
+        body: {'phone_number': phoneNumber, 'otp': otp, 'type': 'signin'},
       );
 
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        await _saveTokens(
-          data['data']['access_token'],
-          data['data']['refresh_token'],
-        );
+      if (response.success && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        await _api.saveTokens(data['access_token'], data['refresh_token']);
         await _loadUserProfile();
         _status = AuthStatus.authenticated;
         notifyListeners();
         return true;
       }
 
-      _error = data['message'] ?? 'OTP verification failed';
+      _error = response.message ?? 'OTP verification failed';
       _status = AuthStatus.unauthenticated;
       notifyListeners();
       return false;
@@ -273,13 +308,11 @@ class AuthProvider with ChangeNotifier {
   /// Password reset request
   Future<bool> resetPassword(String email) async {
     try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.forgotPassword}'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
+      final response = await _api.post(
+        ApiEndpoints.forgotPassword,
+        body: {'email': email},
       );
-
-      return response.statusCode == 200;
+      return response.success;
     } catch (e) {
       _error = e.toString();
       return false;
@@ -289,57 +322,41 @@ class AuthProvider with ChangeNotifier {
   /// Sign out
   Future<void> signOut() async {
     try {
-      await http.post(
-        Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.signOut}'),
-        headers: _authHeaders,
-      );
+      await _api.post(ApiEndpoints.signOut);
     } catch (_) {}
 
-    await _secureStorage.deleteAll();
-    _accessToken = null;
-    _refreshToken = null;
+    await _api.clearTokens();
+
+    // Remove OneSignal user
+    await _notificationService.removeExternalUserId();
+
     _user = null;
     _status = AuthStatus.unauthenticated;
     notifyListeners();
   }
 
-  /// Refresh access token
-  Future<bool> refreshAccessToken() async {
-    if (_refreshToken == null) return false;
+  /// Set up push notifications with user data
+  void _setupNotifications() {
+    if (_user == null) return;
 
-    try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.refresh}'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'refresh_token': _refreshToken}),
-      );
+    // Set external user ID for targeting
+    _notificationService.setExternalUserId(_user!.id);
 
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        await _saveTokens(
-          data['data']['access_token'],
-          data['data']['refresh_token'],
-        );
-        return true;
-      }
-
-      return false;
-    } catch (e) {
-      return false;
+    // Set tags for targeted notifications
+    if (_user!.bloodGroup != null) {
+      _notificationService.setBloodGroupTag(_user!.bloodGroup!);
     }
+
+    // Register device token with backend
+    _notificationService.registerDeviceToken(_user!.id);
   }
 
   /// Update user profile
   Future<bool> updateProfile(Map<String, dynamic> updates) async {
     try {
-      final response = await http.patch(
-        Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.profile}'),
-        headers: _authHeaders,
-        body: jsonEncode(updates),
-      );
+      final response = await _api.patch(ApiEndpoints.profile, body: updates);
 
-      if (response.statusCode == 200) {
+      if (response.success) {
         await _loadUserProfile();
         notifyListeners();
         return true;
@@ -359,6 +376,30 @@ class AuthProvider with ChangeNotifier {
     return await updateProfile({
       'is_available_to_donate': !_user!.isAvailableToDonate,
     });
+  }
+
+  /// Delete user account
+  Future<bool> deleteAccount() async {
+    try {
+      final response = await _api.delete(ApiEndpoints.profile);
+
+      if (response.success) {
+        // Clean up
+        await _api.clearTokens();
+        await _notificationService.removeExternalUserId();
+
+        _user = null;
+        _status = AuthStatus.unauthenticated;
+        notifyListeners();
+        return true;
+      }
+
+      _error = response.message ?? 'Failed to delete account';
+      return false;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    }
   }
 
   void clearError() {

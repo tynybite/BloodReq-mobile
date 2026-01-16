@@ -4,7 +4,7 @@ class ApiConfig {
   // Base URL - Points to your Next.js admin panel API
   // In development: http://localhost:3000/api
   // In production: https://your-domain.com/api
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
+  static const String baseUrl = 'http://192.168.0.102:3000/api';
 
   // Request timeout
   static const Duration timeout = Duration(seconds: 30);
@@ -129,5 +129,14 @@ class AppConstants {
 
 /// OneSignal Configuration (for push notifications)
 class OneSignalConfig {
-  static const String appId = 'YOUR_ONESIGNAL_APP_ID';
+  static const String appId = '07aee5d5-8adf-40a3-95d0-1922cde3d23a';
+}
+
+/// Google Maps/Places Configuration
+class GoogleMapsConfig {
+  // Replace with your Google Places API key
+  // Get one from: https://console.cloud.google.com/apis/credentials
+  // Enable: Places API, Maps SDK for Android, Maps SDK for iOS
+  static const String apiKey =
+      'AIzaSyB08ZH4Hmd_Vuv7SclutgBiv40i16BASCA'; // Leave empty to disable hospital search suggestions
 }

@@ -56,11 +56,11 @@ class _MainShellState extends State<MainShell> {
               child: Container(
                 height: 68,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.cardBg,
                   borderRadius: BorderRadius.circular(34),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
+                      color: context.shadowColor,
                       blurRadius: 20,
                       offset: const Offset(0, 4),
                     ),

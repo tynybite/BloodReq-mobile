@@ -12,98 +12,145 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).user;
+    final userName = (user != null && user.fullName.isNotEmpty)
+        ? user.fullName
+        : 'Savior';
 
     return Scaffold(
+      backgroundColor: context.scaffoldBg,
       body: CustomScrollView(
         slivers: [
-          // App Bar
+          // Top App Bar
           SliverAppBar(
-            expandedHeight: 200,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: AppGradients.heroGradient,
+            floating: true,
+            backgroundColor: context.scaffoldBg,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            toolbarHeight: 72,
+            flexibleSpace: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
                 ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: Colors.white.withOpacity(0.2),
-                              child: Text(
-                                user?.initials ?? 'U',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Welcome back,',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.8),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  Text(
-                                    user?.fullName ?? 'User',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.notifications_outlined,
-                                color: Colors.white,
-                              ),
-                              onPressed: () => context.push('/notifications'),
-                            ),
-                          ],
+                child: Row(
+                  children: [
+                    // User Avatar
+                    GestureDetector(
+                      onTap: () => context.go('/profile'),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: AppGradients.primaryGradient,
+                          shape: BoxShape.circle,
                         ),
-                        const Spacer(),
-                        Text(
-                          'Save Lives Today',
-                          style: Theme.of(context).textTheme.headlineMedium
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Find nearby blood requests or donate to help patients in need.',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                        child: Center(
+                          child: Text(
+                            (user?.initials.isNotEmpty ?? false)
+                                ? user!.initials
+                                : 'S',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 14),
+
+                    // Welcome Text
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Welcome back,',
+                            style: TextStyle(
+                              color: context.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            userName,
+                            style: TextStyle(
+                              color: context.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Notification Button
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.notifications_outlined),
+                        color: context.textSecondary,
+                        iconSize: 22,
+                        onPressed: () => context.push('/notifications'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
 
+          // Hero Section
+          SliverToBoxAdapter(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: AppGradients.heroGradient,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Save Lives Today',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Find nearby blood requests or donate to help patients in need.',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1, end: 0),
+          ),
+
           // Quick Stats
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
                   Expanded(
@@ -128,19 +175,19 @@ class HomeScreen extends StatelessWidget {
                     child: _StatCard(
                       icon: Icons.emoji_events,
                       iconColor: AppColors.success,
-                      value: user?.calculatedBadgeTier.toUpperCase() ?? 'N/A',
+                      value: user?.calculatedBadgeTier.toUpperCase() ?? 'NEW',
                       label: 'Badge',
                     ),
                   ),
                 ],
-              ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1, end: 0),
+              ).animate(delay: 100.ms).fadeIn(duration: 500.ms),
             ),
           ),
 
           // Quick Actions
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -189,7 +236,7 @@ class HomeScreen extends StatelessWidget {
                           icon: Icons.leaderboard,
                           title: 'Leaderboard',
                           color: AppColors.accent,
-                          onTap: () => context.go('/leaderboard'),
+                          onTap: () => context.push('/leaderboard'),
                         ),
                       ),
                     ],
@@ -202,7 +249,7 @@ class HomeScreen extends StatelessWidget {
           // Nearby Requests Section
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -224,7 +271,7 @@ class HomeScreen extends StatelessWidget {
           // Placeholder for requests list
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: List.generate(
                   3,
@@ -245,7 +292,7 @@ class HomeScreen extends StatelessWidget {
                     onTap: () => context.push('/request/sample-$index'),
                   ),
                 ),
-              ).animate(delay: 400.ms).fadeIn(duration: 500.ms),
+              ).animate(delay: 300.ms).fadeIn(duration: 500.ms),
             ),
           ),
 
@@ -274,9 +321,15 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: context.cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -284,11 +337,11 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           Text(
             label,
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 11, color: context.textSecondary),
           ),
         ],
       ),
@@ -316,25 +369,35 @@ class _ActionCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: context.cardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(10),
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: Colors.white, size: 20),
+              child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(fontWeight: FontWeight.w600, color: color),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: context.textPrimary,
+                  fontSize: 13,
+                ),
               ),
             ),
           ],
@@ -380,17 +443,23 @@ class _RequestCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: context.cardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border.withOpacity(0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
@@ -399,7 +468,7 @@ class _RequestCard extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: 16,
                   ),
                 ),
               ),
@@ -418,7 +487,7 @@ class _RequestCard extends StatelessWidget {
                     hospital,
                     style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.textSecondary,
+                      color: context.textSecondary,
                     ),
                   ),
                 ],
@@ -433,7 +502,7 @@ class _RequestCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: urgencyColor.withOpacity(0.15),
+                    color: urgencyColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -448,10 +517,7 @@ class _RequestCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   distance,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 12, color: context.textSecondary),
                 ),
               ],
             ),

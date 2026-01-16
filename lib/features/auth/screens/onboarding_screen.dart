@@ -109,7 +109,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         decoration: BoxDecoration(
                           color: _currentPage == index
                               ? Colors.white
-                              : Colors.white.withOpacity(0.4),
+                              : Colors.white.withValues(alpha: 0.4),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -152,7 +152,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: Text(
                         'Skip',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 16,
                         ),
                       ),
@@ -182,7 +182,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: 160,
                     height: 160,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(40),
                     ),
                     child: Icon(page.icon, size: 80, color: Colors.white),
@@ -213,7 +213,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 page.description,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   height: 1.6,
                 ),
               ).animate(delay: 400.ms).fadeIn(duration: 500.ms),

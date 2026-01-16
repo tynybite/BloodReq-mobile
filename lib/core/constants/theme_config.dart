@@ -34,7 +34,7 @@ class AppTheme {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        side: BorderSide(color: AppColors.border.withOpacity(0.5)),
+        side: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -76,7 +76,7 @@ class AppTheme {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: BorderSide(color: AppColors.border.withOpacity(0.5)),
+        borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -92,7 +92,7 @@ class AppTheme {
     ),
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.surfaceVariant,
-      selectedColor: AppColors.primary.withOpacity(0.15),
+      selectedColor: AppColors.primary.withValues(alpha: 0.15),
       labelStyle: AppTypography.textTheme.labelMedium,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       shape: RoundedRectangleBorder(
@@ -111,7 +111,7 @@ class AppTheme {
       foregroundColor: AppColors.textOnPrimary,
     ),
     dividerTheme: DividerThemeData(
-      color: AppColors.border.withOpacity(0.5),
+      color: AppColors.border.withValues(alpha: 0.5),
       thickness: 1,
     ),
     snackBarTheme: SnackBarThemeData(
@@ -154,7 +154,7 @@ class AppTheme {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        side: BorderSide(color: AppColors.borderDark.withOpacity(0.5)),
+        side: BorderSide(color: AppColors.borderDark.withValues(alpha: 0.5)),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -190,7 +190,9 @@ class AppTheme {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: BorderSide(color: AppColors.borderDark.withOpacity(0.5)),
+        borderSide: BorderSide(
+          color: AppColors.borderDark.withValues(alpha: 0.5),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -208,7 +210,7 @@ class AppTheme {
       elevation: 0,
     ),
     dividerTheme: DividerThemeData(
-      color: AppColors.borderDark.withOpacity(0.5),
+      color: AppColors.borderDark.withValues(alpha: 0.5),
       thickness: 1,
     ),
   );
