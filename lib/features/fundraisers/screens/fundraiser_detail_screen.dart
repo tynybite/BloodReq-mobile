@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
@@ -144,14 +145,16 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
 
                             setSheetState(() => _donating = false);
 
-                            if (response.success && mounted) {
+                            if (!mounted) return;
+
+                            if (response.success) {
                               Navigator.pop(context);
                               AppToast.success(
                                 context,
                                 'Thank you for your donation!',
                               );
                               _loadFundraiser(); // Refresh
-                            } else if (mounted) {
+                            } else {
                               AppToast.error(
                                 context,
                                 response.message ?? 'Donation failed',
@@ -427,7 +430,12 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                   color: AppColors.textSecondary,
                 ),
                 onPressed: () {
-                  // TODO: Share functionality
+                  Share.share(
+                    'Support this fundraiser: ${_fundraiser!['title']}\n'
+                    'Goal: ৳${_fundraiser!['amount_needed']}\n'
+                    'Raised: ৳${_fundraiser!['amount_raised']}\n\n'
+                    'Read more and donate on BloodReq!',
+                  );
                 },
               ),
             ),

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'core/services/sync_service.dart';
+import 'core/providers/language_provider.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/constants/theme_config.dart';
@@ -11,6 +15,7 @@ import 'core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -21,7 +26,26 @@ void main() async {
   // Initialize push notifications
   await NotificationService().initialize();
 
-  runApp(const BloodReqApp());
+  // Request other permissions (Location)
+  await _requestPermissions();
+
+  // Initialize Services
+  final syncService = SyncService();
+  await syncService.init();
+
+  final languageProvider = LanguageProvider();
+  await languageProvider.loadSavedLanguage();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider.value(value: syncService),
+        ChangeNotifierProvider.value(value: languageProvider),
+      ],
+      child: const BloodReqApp(),
+    ),
+  );
 }
 
 class BloodReqApp extends StatelessWidget {
@@ -47,5 +71,17 @@ class BloodReqApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+Future<void> _requestPermissions() async {
+  try {
+    // Check and request location permission
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      await Geolocator.requestPermission();
+    }
+  } catch (e) {
+    debugPrint('Error requesting permissions: $e');
   }
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart'; // Added for client-side refresh
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../constants/app_constants.dart';
@@ -84,24 +85,14 @@ class ApiService {
 
   /// Refresh the access token
   Future<bool> _refreshAccessToken() async {
-    if (_refreshToken == null) return false;
-
     try {
-      final response = await http
-          .post(
-            Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.refresh}'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'refresh_token': _refreshToken}),
-          )
-          .timeout(ApiConfig.timeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          await saveTokens(
-            data['data']['access_token'],
-            data['data']['refresh_token'],
-          );
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Force refresh ID token from Firebase directly
+        final newToken = await user.getIdToken(true);
+        if (newToken != null) {
+          debugPrint('✅ Token refreshed via Firebase SDK');
+          await saveTokens(newToken, _refreshToken ?? '');
           return true;
         }
       }
@@ -133,6 +124,10 @@ class ApiService {
           response = await http
               .get(uri, headers: _headers)
               .timeout(ApiConfig.timeout);
+        } else {
+          // If refresh fails with 401, clear tokens to force re-login
+          debugPrint('Persistent 401 detected in GET. Clearing stale tokens.');
+          await clearTokens();
         }
       }
 
@@ -173,6 +168,9 @@ class ApiService {
                 body: body != null ? jsonEncode(body) : null,
               )
               .timeout(ApiConfig.timeout);
+        } else {
+          debugPrint('Persistent 401 detected in POST. Clearing stale tokens.');
+          await clearTokens();
         }
       }
 
@@ -213,6 +211,11 @@ class ApiService {
                 body: body != null ? jsonEncode(body) : null,
               )
               .timeout(ApiConfig.timeout);
+        } else {
+          debugPrint(
+            'Persistent 401 detected in PATCH. Clearing stale tokens.',
+          );
+          await clearTokens();
         }
       }
 
@@ -242,6 +245,11 @@ class ApiService {
           response = await http
               .delete(uri, headers: _headers)
               .timeout(ApiConfig.timeout);
+        } else {
+          debugPrint(
+            'Persistent 401 detected in DELETE. Clearing stale tokens.',
+          );
+          await clearTokens();
         }
       }
 

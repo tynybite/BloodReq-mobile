@@ -4,7 +4,7 @@ class ApiConfig {
   // Base URL - Points to your Next.js admin panel API
   // In development: http://localhost:3000/api
   // In production: https://your-domain.com/api
-  static const String baseUrl = 'http://192.168.0.102:3000/api';
+  static const String baseUrl = 'http://192.168.1.5:3000/api';
 
   // Request timeout
   static const Duration timeout = Duration(seconds: 30);
@@ -18,6 +18,7 @@ class ApiEndpoints {
   static const String signIn = '/auth/signin';
   static const String signInPhone = '/auth/signin/phone';
   static const String verifyOtp = '/auth/verify-otp';
+  static const String resendOtp = '/auth/resend-otp';
   static const String oauth = '/auth/oauth';
   static const String refresh = '/auth/refresh';
   static const String forgotPassword = '/auth/forgot-password';

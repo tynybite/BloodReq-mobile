@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_theme.dart';
-import '../../../core/services/api_service.dart';
+
+import '../../../core/providers/auth_provider.dart';
+import '../../../core/services/sync_service.dart';
+import '../../../core/models/blood_request.dart';
 
 class BloodRequestsScreen extends StatefulWidget {
   const BloodRequestsScreen({super.key});
@@ -14,9 +19,14 @@ class BloodRequestsScreen extends StatefulWidget {
 }
 
 class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
-  final ApiService _api = ApiService();
+  // Mode: Single List
+  List<BloodRequest> _requests = [];
 
-  List<Map<String, dynamic>> _requests = [];
+  // Mode: Split List (Location + Defaults)
+  List<BloodRequest> _matchingRequests = [];
+  List<BloodRequest> _otherRequests = [];
+  Position? _currentPosition;
+
   bool _isLoading = true;
   String? _error;
 
@@ -27,55 +37,73 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadRequests();
+    _initData();
   }
 
-  Future<void> _loadRequests() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  Future<void> _initData() async {
+    // 1. Load instantly from cache
+    _refreshFromCache();
 
+    // 2. Trigger sync if needed (SyncService handles 30min interval, but we can force one on screen open if we want)
+    // context.read<SyncService>().syncData();
+
+    // 3. Get location for sorting
+    await _getCurrentLocation();
+  }
+
+  void _refreshFromCache() {
+    final syncService = context.read<SyncService>();
+    final allRequests = syncService.getCachedRequests();
+
+    if (mounted) {
+      setState(() {
+        _requests = allRequests;
+        _isLoading = false;
+        // Logic to split lists will be here or in build
+        _splitLists();
+      });
+    }
+  }
+
+  void _splitLists() {
+    if (_requests.isEmpty) return;
+
+    final authProvider = context.read<AuthProvider>();
+    final userBloodGroup = authProvider.user?.bloodGroup;
+
+    if (_currentPosition != null && userBloodGroup != null) {
+      // Logic for splitting would go here (same as before but with Objects)
+      // For now, simpler implementation:
+      _matchingRequests = _requests
+          .where((r) => r.bloodGroup == userBloodGroup)
+          .toList();
+      _otherRequests = _requests
+          .where((r) => r.bloodGroup != userBloodGroup)
+          .toList();
+    } else {
+      _matchingRequests = [];
+      _otherRequests = [];
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
     try {
-      final queryParams = <String, String>{};
-      if (_selectedBloodGroup != null) {
-        queryParams['blood_group'] = _selectedBloodGroup!;
-      }
-      if (_selectedUrgency != 'all') {
-        queryParams['urgency'] = _selectedUrgency;
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
       }
 
-      final response = await _api.get<dynamic>(
-        ApiEndpoints.bloodRequests,
-        queryParams: queryParams.isNotEmpty ? queryParams : null,
-      );
-
-      if (response.success && response.data != null) {
-        List<dynamic> requestsList;
-
-        // Handle response - could be List or Map with data property
-        if (response.data is List) {
-          requestsList = response.data as List;
-        } else if (response.data is Map) {
-          final mapData = response.data as Map<String, dynamic>;
-          requestsList = (mapData['data'] ?? mapData['requests'] ?? []) as List;
-        } else {
-          requestsList = [];
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        final position = await Geolocator.getCurrentPosition();
+        if (mounted) {
+          setState(() => _currentPosition = position);
         }
-
-        setState(() {
-          _requests = requestsList
-              .map((e) => e as Map<String, dynamic>)
-              .toList();
-        });
-      } else {
-        setState(() => _error = response.message ?? 'Failed to load requests');
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      debugPrint('Location error: $e');
+      // Continue without location
     }
-
-    setState(() => _isLoading = false);
   }
 
   @override
@@ -93,7 +121,13 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(onRefresh: _loadRequests, child: _buildBody()),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await context.read<SyncService>().syncData();
+          _refreshFromCache();
+        },
+        child: _buildBody(),
+      ),
     );
   }
 
@@ -118,7 +152,12 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _loadRequests,
+                onPressed: () {
+                  setState(() => _isLoading = true);
+                  context.read<SyncService>().syncData().then(
+                    (_) => _refreshFromCache(),
+                  );
+                },
                 child: const Text('Retry'),
               ),
             ],
@@ -127,6 +166,12 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
       );
     }
 
+    // Split List Mode
+    if (_matchingRequests.isNotEmpty || _otherRequests.isNotEmpty) {
+      return _buildSplitList();
+    }
+
+    // Standard Mode Empty State
     if (_requests.isEmpty) {
       return Center(
         child: Column(
@@ -158,6 +203,7 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
       );
     }
 
+    // Standard Mode List
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _requests.length,
@@ -165,7 +211,7 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
         final request = _requests[index];
         return _RequestCard(
               request: request,
-              onTap: () => context.push('/request/${request['id']}'),
+              onTap: () => context.push('/request/${request.id}'),
             )
             .animate(delay: Duration(milliseconds: index * 50))
             .fadeIn(duration: 300.ms)
@@ -174,9 +220,77 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
     );
   }
 
+  Widget _buildSplitList() {
+    return CustomScrollView(
+      slivers: [
+        if (_matchingRequests.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+              child: Row(
+                children: [
+                  Icon(Icons.stars_rounded, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Recommended for You',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final request = _matchingRequests[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _RequestCard(
+                  request: request,
+                  onTap: () => context.push('/request/${request.id}'),
+                ).animate().fadeIn().slideX(),
+              );
+            }, childCount: _matchingRequests.length),
+          ),
+        ],
+        if (_otherRequests.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+              child: Text(
+                'Other Nearby Requests',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final request = _otherRequests[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _RequestCard(
+                  request: request,
+                  onTap: () => context.push('/request/${request.id}'),
+                ).animate().fadeIn(),
+              );
+            }, childCount: _otherRequests.length),
+          ),
+        ],
+        const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
+      ],
+    );
+  }
+
   void _showFilterSheet() {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
+      useSafeArea: true,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -291,7 +405,10 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      _loadRequests();
+                      setState(() => _isLoading = true);
+                      context.read<SyncService>().syncData().then(
+                        (_) => _refreshFromCache(),
+                      );
                     },
                     child: const Text('Apply Filters'),
                   ),
@@ -307,13 +424,13 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
 }
 
 class _RequestCard extends StatelessWidget {
-  final Map<String, dynamic> request;
+  final BloodRequest request;
   final VoidCallback onTap;
 
   const _RequestCard({required this.request, required this.onTap});
 
   Color get urgencyColor {
-    switch (request['urgency']) {
+    switch (request.urgency) {
       case 'critical':
         return AppColors.urgencyCritical;
       case 'urgent':
@@ -353,7 +470,7 @@ class _RequestCard extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  request['blood_group'] ?? '?',
+                  request.bloodGroup,
                   style: TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.bold,
@@ -370,7 +487,7 @@ class _RequestCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    request['patient_name'] ?? 'Patient',
+                    request.patientName,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
@@ -387,7 +504,7 @@ class _RequestCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          request['hospital'] ?? 'Hospital',
+                          request.hospital,
                           style: TextStyle(
                             fontSize: 13,
                             color: AppColors.textSecondary,
@@ -407,7 +524,8 @@ class _RequestCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        request['city'] ?? '',
+                        request
+                            .location, // Assuming city is part of location or not available in new model yet
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textTertiary,
@@ -433,7 +551,7 @@ class _RequestCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    (request['urgency'] ?? 'planned').toString().toUpperCase(),
+                    request.urgency.toUpperCase(),
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -443,7 +561,7 @@ class _RequestCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${request['units'] ?? 1} unit${(request['units'] ?? 1) > 1 ? 's' : ''}',
+                  '${request.units} unit${request.units > 1 ? 's' : ''}',
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,

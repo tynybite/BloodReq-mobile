@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart'; // Added geolocator
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
@@ -22,6 +23,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   bool _isLoading = true;
   String? _error;
   bool _offering = false;
+  String? _distance; // Added for distance display
 
   @override
   void initState() {
@@ -41,11 +43,42 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
     if (response.success && response.data != null) {
       setState(() => _request = response.data as Map<String, dynamic>);
+      _calculateDistance(); // Calculate distance once data is loaded
     } else {
       setState(() => _error = response.message ?? 'Failed to load request');
     }
 
     setState(() => _isLoading = false);
+  }
+
+  Future<void> _calculateDistance() async {
+    if (_request == null ||
+        _request!['latitude'] == null ||
+        _request!['longitude'] == null)
+      return;
+
+    try {
+      // Check permissions first (usually handled in splash/home, but safe to check)
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      final double distanceInMeters = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        (_request!['latitude'] as num).toDouble(),
+        (_request!['longitude'] as num).toDouble(),
+      );
+
+      setState(() {
+        _distance = '${(distanceInMeters / 1000).toStringAsFixed(1)} km';
+      });
+    } catch (e) {
+      debugPrint('Error calculating distance: $e');
+    }
   }
 
   Future<void> _offerToDonate() async {
@@ -58,10 +91,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
     setState(() => _offering = false);
 
-    if (response.success && mounted) {
+    if (!mounted) return;
+
+    if (response.success) {
       AppToast.success(context, 'Thank you! Your offer has been recorded.');
       _loadRequest(); // Refresh to show updated donor count
-    } else if (mounted) {
+    } else {
       // Show appropriate message type based on error
       final message = response.message ?? 'Failed to offer donation';
       if (message.toLowerCase().contains('cannot') ||
@@ -97,7 +132,13 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             IconButton(
               icon: const Icon(Icons.share_outlined),
               onPressed: () {
-                // TODO: Share functionality
+                Share.share(
+                  'URGENT: ${_request!['blood_group']} Blood Needed!\n'
+                  'Patient: ${_request!['patient_name']}\n'
+                  'Hospital: ${_request!['hospital']}\n'
+                  'Contact: ${_request!['contact_number']}\n\n'
+                  'Please help if you can! #BloodReq',
+                );
               },
             ),
         ],
@@ -257,6 +298,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   icon: Icons.location_on_outlined,
                   label: 'Location',
                   value: _request!['city'] ?? 'Not specified',
+                  extras: _distance != null ? 'Approx $_distance away' : null,
                 ),
                 const Divider(height: 24),
                 _DetailRow(
@@ -383,7 +425,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             ),
             const SizedBox(width: 12),
 
-            // Copy Number Button
+            // Directions Button
             Container(
               width: 56,
               height: 56,
@@ -392,14 +434,35 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: IconButton(
-                icon: Icon(Icons.copy, color: AppColors.info),
-                onPressed: () {
-                  final phone = _request!['contact_number'];
-                  if (phone != null) {
-                    Clipboard.setData(ClipboardData(text: phone));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Phone number copied')),
+                icon: Icon(Icons.directions, color: AppColors.info),
+                onPressed: () async {
+                  final lat = _request!['latitude'];
+                  final lng = _request!['longitude'];
+
+                  if (lat != null && lng != null) {
+                    final uri = Uri.parse(
+                      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
                     );
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  } else {
+                    // Fallback to searching by hospital name + city
+                    final query = Uri.encodeComponent(
+                      '${_request!['hospital']}, ${_request!['city']}',
+                    );
+                    final uri = Uri.parse(
+                      'https://www.google.com/maps/search/?api=1&query=$query',
+                    );
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
                   }
                 },
               ),
@@ -436,6 +499,7 @@ class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final String? extras; // Added for distance info
   final bool isPhone;
   final VoidCallback? onTap;
 
@@ -443,6 +507,7 @@ class _DetailRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.extras,
     this.isPhone = false,
     this.onTap,
   });
@@ -478,6 +543,18 @@ class _DetailRow extends StatelessWidget {
                     color: isPhone ? AppColors.primary : AppColors.textPrimary,
                   ),
                 ),
+                if (extras != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      extras!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

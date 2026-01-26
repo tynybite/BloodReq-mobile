@@ -36,6 +36,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       queryParams: {'period': _period},
     );
 
+    if (!mounted) return;
+
     if (response.success && response.data != null) {
       List<dynamic> leadersList;
 
@@ -60,7 +62,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       setState(() => _error = response.message ?? 'Failed to load leaderboard');
     }
 
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override

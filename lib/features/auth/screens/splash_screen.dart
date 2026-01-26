@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../shared/widgets/offline_drop_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,9 +17,72 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  bool _isOffline = false;
+
   @override
   void initState() {
     super.initState();
+    _checkNetworkAndNavigate();
+  }
+
+  Future<bool> _hasInternet() async {
+    try {
+      final result = await InternetAddress.lookup('google.com');
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } on SocketException catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _checkNetworkAndNavigate() async {
+    debugPrint('🔍 SplashScreen: Checking network...');
+
+    // Check basic interface connectivity first
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      debugPrint('🔻 SplashScreen: Connectivity says NONE. Offline.');
+      if (mounted) setState(() => _isOffline = true);
+      return;
+    }
+
+    // Check actual internet access (DNS lookup)
+    // This catches "Connected to Wifi but no Internet"
+    debugPrint('🔍 SplashScreen: Pinging google.com...');
+    final hasNet = await _hasInternet();
+    if (!hasNet) {
+      debugPrint('🔻 SplashScreen: DNS lookup failed. Offline.');
+      if (mounted) setState(() => _isOffline = true);
+      return;
+    }
+
+    debugPrint('✅ SplashScreen: Internet verified. Navigating...');
+    _navigateAfterSplash();
+  }
+
+  Future<void> _retryConnection() async {
+    if (mounted) setState(() => _isOffline = false); // Show loader again
+
+    // Check network again
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) setState(() => _isOffline = true);
+      return;
+    }
+
+    // Check DNS
+    final hasNet = await _hasInternet();
+    if (!hasNet) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) setState(() => _isOffline = true);
+      return;
+    }
+
+    // Network is back, retry auth
+    if (!mounted) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.retryAuth();
+
     _navigateAfterSplash();
   }
 
@@ -34,8 +100,27 @@ class _SplashScreenState extends State<SplashScreen> {
         authProvider.status == AuthStatus.loading) {
       await Future.delayed(const Duration(milliseconds: 200));
       attempts++;
-      // Timeout after 5 seconds - proceed to onboarding
-      if (attempts > 25 || !mounted) break;
+
+      // Check network periodically during long loads (every 1 second)
+      if (attempts % 5 == 0) {
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (connectivityResult.contains(ConnectivityResult.none)) {
+          if (mounted) setState(() => _isOffline = true);
+          return;
+        }
+
+        // Also check real internet if taking too long (> 2 seconds)
+        if (attempts > 10) {
+          final hasNet = await _hasInternet();
+          if (!hasNet) {
+            if (mounted) setState(() => _isOffline = true);
+            return;
+          }
+        }
+      }
+
+      // Timeout after 10 seconds (increased for slow networks)
+      if (attempts > 50 || !mounted) break;
     }
 
     if (!mounted) return;
@@ -49,6 +134,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isOffline) {
+      return OfflineDropScreen(onRetry: _retryConnection);
+    }
+
     return Scaffold(
       body: Container(
         width: double.infinity,

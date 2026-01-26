@@ -259,7 +259,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   Switch.adaptive(
                     value: _isAvailable,
                     onChanged: (v) => setState(() => _isAvailable = v),
-                    activeColor: AppColors.success,
+                    activeTrackColor: AppColors.success,
                   ),
                 ],
               ),

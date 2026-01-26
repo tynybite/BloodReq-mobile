@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">BloodReq</string>
-    <!-- Google Sign In Web Client ID for Supabase OAuth -->
-    <string name="default_web_client_id">594682851513-tr9r4jvgevsbujg4k9d47d8oiim08krh.apps.googleusercontent.com</string>
+
 </resources>

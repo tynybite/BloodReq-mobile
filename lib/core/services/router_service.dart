@@ -8,6 +8,7 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
+import '../../features/auth/screens/otp_verification_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/home/screens/main_shell.dart';
 import '../../features/blood_requests/screens/blood_requests_screen.dart';
@@ -44,7 +45,8 @@ class RouterService {
           state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
           state.matchedLocation == '/onboarding' ||
-          state.matchedLocation == '/forgot-password';
+          state.matchedLocation == '/forgot-password' ||
+          state.matchedLocation == '/otp-verification';
 
       // Still loading, show splash
       if (isLoading && state.matchedLocation != '/') {
@@ -83,6 +85,13 @@ class RouterService {
       GoRoute(
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/otp-verification',
+        builder: (context, state) {
+          final email = state.extra as String;
+          return OtpVerificationScreen(email: email);
+        },
       ),
 
       // Main App Shell with Bottom Navigation

@@ -13,7 +13,7 @@ class NotificationService {
 
   // OneSignal App ID - Replace with your actual OneSignal App ID
   // Get this from: https://app.onesignal.com > Settings > Keys & IDs
-  static const String _oneSignalAppId = 'YOUR_ONESIGNAL_APP_ID';
+  static const String _oneSignalAppId = '07aee5d5-8adf-40a3-95d0-1922cde3d23a';
 
   bool _initialized = false;
   String? _playerId;
@@ -170,6 +170,19 @@ class NotificationService {
   Future<bool> areNotificationsEnabled() async {
     return OneSignal.Notifications.permission;
   }
+
+  /// Disable push notifications (opt-out)
+  Future<void> disablePush() async {
+    OneSignal.User.pushSubscription.optOut();
+  }
+
+  /// Enable push notifications (opt-in)
+  Future<void> enablePush() async {
+    OneSignal.User.pushSubscription.optIn();
+  }
+
+  /// Check if push is enabled (opted-in)
+  bool get isPushEnabled => OneSignal.User.pushSubscription.optedIn ?? false;
 
   /// Request notification permissions
   Future<bool> requestPermission() async {

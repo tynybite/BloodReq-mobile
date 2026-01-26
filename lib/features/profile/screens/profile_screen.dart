@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -128,7 +129,7 @@ class ProfileScreen extends StatelessWidget {
               icon: Icons.help_outline,
               title: 'Help & Support',
               onTap: () {
-                // TODO: Navigate to help
+                launchUrl(Uri.parse('https://bloodreq.com/help'));
               },
             ),
 
