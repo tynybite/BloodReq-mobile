@@ -4,6 +4,8 @@ class ApiConfig {
   // Base URL - Points to your Next.js admin panel API
   // In development: http://localhost:3000/api
   // In production: https://your-domain.com/api
+  // static const String baseUrl = 'https://bloodreq.vercel.app/api';
+
   static const String baseUrl = 'http://192.168.1.5:3000/api';
 
   // Request timeout

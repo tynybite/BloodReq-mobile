@@ -13,6 +13,7 @@ import '../../features/home/screens/home_screen.dart';
 import '../../features/home/screens/main_shell.dart';
 import '../../features/blood_requests/screens/blood_requests_screen.dart';
 import '../../features/blood_requests/screens/create_request_screen.dart';
+import '../../features/fundraisers/screens/create_fundraiser_screen.dart';
 import '../../features/blood_requests/screens/request_detail_screen.dart';
 import '../../features/blood_requests/screens/my_requests_screen.dart';
 import '../../features/blood_requests/screens/my_donations_screen.dart';
@@ -164,6 +165,10 @@ class RouterService {
       GoRoute(
         path: '/my-donations',
         builder: (context, state) => const MyDonationsScreen(),
+      ),
+      GoRoute(
+        path: '/create-fundraiser',
+        builder: (context, state) => const CreateFundraiserScreen(),
       ),
     ],
     errorBuilder: (context, state) =>

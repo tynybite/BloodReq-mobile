@@ -106,7 +106,7 @@ class ProfileScreen extends StatelessWidget {
             ),
             _MenuItem(
               icon: Icons.water_drop_outlined,
-              title: 'My Blood Requests',
+              title: 'My Requests',
               onTap: () => context.push('/my-requests'),
             ),
             _MenuItem(

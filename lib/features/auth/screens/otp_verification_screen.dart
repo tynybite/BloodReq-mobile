@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/language_provider.dart';
+import '../../../core/config/language_config.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
@@ -58,11 +59,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> _handleVerify() async {
+    final lang = context.read<LanguageProvider>();
     String otp = _controllers.map((c) => c.text).join();
     if (otp.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the full 6-digit code')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(lang.getText('enter_full_code'))));
       return;
     }
 
@@ -78,7 +80,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.error ?? 'Verification failed'),
+          content: Text(
+            authProvider.error ?? lang.getText('verification_failed'),
+          ),
           backgroundColor: AppColors.error,
         ),
       );
@@ -87,6 +91,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   Future<void> _handleResend() async {
     if (_resendCooldown > 0) return;
+    final lang = context.read<LanguageProvider>();
 
     setState(() => _isLoading = true);
     final authProvider = context.read<AuthProvider>();
@@ -94,14 +99,14 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     setState(() => _isLoading = false);
 
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Code resent to your email')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(lang.getText('code_resent'))));
       _startTimer();
     } else if (mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to resend code')));
+      ).showSnackBar(SnackBar(content: Text(lang.getText('resend_failed'))));
     }
   }
 
@@ -127,7 +132,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.scaffoldBg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -135,6 +140,63 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+              ),
+              child: PopupMenuButton<Locale>(
+                offset: const Offset(0, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                tooltip: 'Select Language',
+                initialValue: lang.currentLocale,
+                onSelected: (locale) => lang.changeLanguage(locale),
+                itemBuilder: (context) => LanguageConfig.options.map((option) {
+                  return PopupMenuItem(
+                    value: Locale(option.code),
+                    child: Row(
+                      children: [
+                        Text(option.flag, style: const TextStyle(fontSize: 20)),
+                        const SizedBox(width: 12),
+                        Text(option.name),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${LanguageConfig.getOption(lang.currentLocale.languageCode).flag} ${lang.currentLocale.languageCode.toUpperCase()}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.arrow_drop_down,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       extendBodyBehindAppBar: true,
       body: Stack(
@@ -144,7 +206,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             top: 0,
             left: 0,
             right: 0,
-            height: size.height * 0.40,
+            height: size.height * 0.45,
             child: CustomPaint(painter: _BlobPainter(color: AppColors.primary)),
           ),
 
@@ -157,7 +219,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Verification',
+                      lang.getText('verification'),
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -169,10 +231,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Enter the 6-digit code sent to\n${widget.email}',
+                      '${lang.getText('enter_code_sent')}\n${widget.email}',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ).animate().fadeIn(delay: 200.ms),
                   ),
@@ -183,11 +245,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.cardBg,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: context.isDark
+                              ? Colors.black.withValues(alpha: 0.3)
+                              : AppColors.primary.withValues(alpha: 0.1),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -219,7 +283,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                     borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
+                                      color: context.borderColor,
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
@@ -259,9 +323,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : const Text(
-                                    'Verify',
-                                    style: TextStyle(
+                                : Text(
+                                    lang.getText('verify'),
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -276,8 +340,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           onPressed: _resendCooldown > 0 ? null : _handleResend,
                           child: Text(
                             _resendCooldown > 0
-                                ? 'Resend code in ${_resendCooldown}s'
-                                : 'Resend Code',
+                                ? '${lang.getText('resend_code_in')} ${_resendCooldown}s'
+                                : lang.getText('resend_code'),
                             style: TextStyle(
                               color: _resendCooldown > 0
                                   ? Colors.grey

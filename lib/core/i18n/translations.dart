@@ -1,78 +1,24 @@
+import 'package:flutter/material.dart';
+import 'languages/en.dart';
+import 'languages/bn.dart';
+import 'languages/de.dart';
+import 'languages/pl.dart';
+import 'languages/tl.dart';
+
 class AppTranslations {
   static const Map<String, Map<String, String>> translations = {
-    'en': {
-      'app_name': 'BloodReq',
-      'welcome': 'Welcome Back',
-      'welcome_subtitle': 'Sign in to continue saving lives',
-      'email': 'Email',
-      'password': 'Password',
-      'forgot_password': 'Forgot Password?',
-      'sign_in': 'Sign In',
-      'or': 'OR',
-      'continue_google': 'Continue with Google',
-      'no_account': "Don't have an account?",
-      'sign_up': 'Sign Up',
-      'enter_email': 'Please enter your email',
-      'valid_email': 'Please enter a valid email',
-      'enter_password': 'Please enter your password',
-      'password_length': 'Password must be at least 6 characters',
-      'loading': 'Signing in...',
-      'send_reset_link': 'Send Reset Link',
-      'reset_your_password': 'Reset your password',
-      'create_account': 'Create Account',
-      'basic_info': 'Basic Information',
-      'basic_info_subtitle': 'Tell us a little about yourself',
-      'full_name': 'Full Name',
-      'enter_name': 'Please enter your name',
-      'phone_number': 'Phone Number',
-      'continue': 'Continue',
-      'blood_info': 'Blood Information',
-      'blood_group_q': "What's your blood group?",
-      'your_location': 'Your Location',
-      'location_subtitle': 'This helps us find nearby donors and requests',
-      'country': 'Country',
-      'city': 'City',
-      'terms_privacy': 'By signing up, you agree to our Terms & Privacy Policy',
-      'verify_email_msg': 'Please check your email to verify your account',
-      'reg_failed': 'Registration failed',
-    },
-    'bn': {
-      'app_name': 'ব্লাডরেক',
-      'welcome': 'স্বাগতম',
-      'welcome_subtitle': 'জীবন বাঁচাতে লগইন করুন',
-      'email': 'ইমেইল',
-      'password': 'পাসওয়ার্ড',
-      'forgot_password': 'পাসওয়ার্ড ভুলে গেছেন?',
-      'sign_in': 'লগইন করুন',
-      'or': 'অথবা',
-      'continue_google': 'গুগল দিয়ে চালিয়ে যান',
-      'no_account': 'অ্যাকাউন্ট নেই?',
-      'sign_up': 'নিবন্ধন করুন',
-      'enter_email': 'আপনার ইমেইল দিন',
-      'valid_email': 'সঠিক ইমেইল দিন',
-      'enter_password': 'আপনার পাসওয়ার্ড দিন',
-      'password_length': 'পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে',
-      'loading': 'লগইন হচ্ছে...',
-      'send_reset_link': 'লিংক পাঠান',
-      'reset_your_password': 'পাসওয়ার্ড রিসেট করুন',
-      'create_account': 'অ্যাকাউন্ট তৈরি করুন',
-      'basic_info': 'মৌলিক তথ্য',
-      'basic_info_subtitle': 'আপনার সম্পর্কে কিছু বলুন',
-      'full_name': 'সম্পূর্ণ নাম',
-      'enter_name': 'আপনার নাম লিখুন',
-      'phone_number': 'ফোন নম্বর',
-      'continue': 'চালিয়ে যান',
-      'blood_info': 'রক্তের তথ্য',
-      'blood_group_q': 'আপনার রক্তের গ্রুপ কি?',
-      'your_location': 'আপনার অবস্থান',
-      'location_subtitle':
-          'এটি আমাদের নিকটবর্তী দাতা এবং অনুরোধ খুঁজে পেতে সাহায্য করে',
-      'country': 'দেশ',
-      'city': 'শহর',
-      'terms_privacy':
-          'নিবন্ধন করে আপনি আমাদের শর্তাবলী এবং গোপনীয়তা নীতিতে সম্মত হচ্ছেন',
-      'verify_email_msg': 'আপনার অ্যাকাউন্ট যাচাই করতে ইমেইল চেক করুন',
-      'reg_failed': 'নিবন্ধন ব্যর্থ হয়েছে',
-    },
+    'en': en,
+    'bn': bn,
+    'de': de,
+    'pl': pl,
+    'tl': tl,
   };
+
+  static const List<Locale> supportedLocales = [
+    Locale('en'),
+    Locale('bn'),
+    Locale('de'),
+    Locale('pl'),
+    Locale('tl'),
+  ];
 }

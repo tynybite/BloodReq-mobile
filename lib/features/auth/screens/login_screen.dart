@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/language_provider.dart';
+import '../../../core/config/language_config.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -63,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.scaffoldBg,
       body: Stack(
         children: [
           // 1. Organic Blob Background
@@ -118,11 +119,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(20), // Reduced padding
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.cardBg,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.08),
+                          color: context.isDark
+                              ? Colors.black.withValues(alpha: 0.3)
+                              : AppColors.primary.withValues(alpha: 0.08),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
                         ),
@@ -135,10 +138,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Text(
                             lang.getText('welcome'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
+                              color: context.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -153,11 +156,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               prefixIcon: const Icon(Icons.email_outlined),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.border),
+                                borderSide: BorderSide(
+                                  color: context.borderColor,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.border),
+                                borderSide: BorderSide(
+                                  color: context.borderColor,
+                                ),
                               ),
                             ),
                             validator: (v) => (v == null || v.isEmpty)
@@ -190,11 +197,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.border),
+                                borderSide: BorderSide(
+                                  color: context.borderColor,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.border),
+                                borderSide: BorderSide(
+                                  color: context.borderColor,
+                                ),
                               ),
                             ),
                             validator: (v) => (v == null || v.length < 6)
@@ -262,7 +273,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text(
                         lang.getText('or'),
-                        style: TextStyle(color: AppColors.textTertiary),
+                        style: TextStyle(color: context.textTertiary),
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
@@ -293,14 +304,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               : const Icon(Icons.g_mobiledata, size: 28),
                           label: Text(
                             lang.getText('continue_google'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
+                              color: context.textPrimary,
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: AppColors.border),
+                            side: BorderSide(color: context.borderColor),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -318,13 +329,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text(
                         lang.getText('no_account'),
-                        style: TextStyle(color: AppColors.textSecondary),
+                        style: TextStyle(color: context.textSecondary),
                       ),
                       TextButton(
                         onPressed: () => context.push('/register'),
                         child: Text(
                           lang.getText('sign_up'),
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
                           ),
@@ -359,28 +370,22 @@ class _LoginScreenState extends State<LoginScreen> {
                   tooltip: 'Select Language',
                   initialValue: lang.currentLocale,
                   onSelected: (locale) => lang.changeLanguage(locale),
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: Locale('en'),
-                      child: Row(
-                        children: [
-                          Text('🇺🇸', style: TextStyle(fontSize: 20)),
-                          SizedBox(width: 12),
-                          Text('English'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: Locale('bn'),
-                      child: Row(
-                        children: [
-                          Text('🇧🇩', style: TextStyle(fontSize: 20)),
-                          SizedBox(width: 12),
-                          Text('Bangla'),
-                        ],
-                      ),
-                    ),
-                  ],
+                  itemBuilder: (context) =>
+                      LanguageConfig.options.map((option) {
+                        return PopupMenuItem(
+                          value: Locale(option.code),
+                          child: Row(
+                            children: [
+                              Text(
+                                option.flag,
+                                style: const TextStyle(fontSize: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(option.name),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -389,9 +394,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Row(
                       children: [
                         Text(
-                          lang.currentLocale.languageCode == 'en'
-                              ? '🇺🇸 ENG'
-                              : '🇧🇩 BN',
+                          '${LanguageConfig.getOption(lang.currentLocale.languageCode).flag} ${lang.currentLocale.languageCode.toUpperCase()}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +9,10 @@ import '../../../core/constants/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/language_provider.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/config/language_config.dart';
+import '../../../core/config/country_config.dart';
+import '../widgets/country_selector_modal.dart';
+import '../../../core/widgets/generic_selection_modal.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,7 +25,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _pageController = PageController();
   final _api = ApiService();
   int _currentStep = 0;
-  bool _isLoading = false;
 
   // Form data
   final _formKey = GlobalKey<FormState>();
@@ -28,9 +32,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
   String _selectedBloodGroup = 'O+';
-  String _selectedCountry = 'Bangladesh';
-  String _selectedCity = 'Dhaka';
+  String? _selectedCountry; // For Location Step
+  String? _selectedCity; // For Location Step
+  String _selectedCountryFlag = '🇧🇩'; // Default to BD or update on selection
+
+  // New Phone Country State
+  CountryOption _phoneCountry = CountryConfig.getOption('US');
+
+  bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
   // Location data
   List<Map<String, dynamic>> _countries = [];
@@ -50,6 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -77,8 +91,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
           }
 
           if (_countries.isNotEmpty) {
-            _selectedCountry = _countries.first['name'] ?? 'Bangladesh';
-            _loadCities(_selectedCountry);
+            final first = _countries.first;
+            _selectedCountry = first['name'] ?? 'Bangladesh';
+
+            // Resolve flag for initial selection
+            final code = first['code'] as String? ?? 'BD';
+            final config = CountryConfig.countries.firstWhere(
+              (c) => c.code == code || c.name == _selectedCountry,
+              orElse: () => CountryConfig.countries.firstWhere(
+                (c) => c.code == 'BD',
+                orElse: () => CountryConfig.countries[0],
+              ),
+            );
+            _selectedCountryFlag = config.flag;
+
+            if (_selectedCountry != null) {
+              _loadCities(_selectedCountry!);
+            }
           }
         });
       }
@@ -143,19 +172,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  void _showCountrySelector() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CountrySelectorModal(
+        onSelect: (country) {
+          setState(() => _phoneCountry = country);
+        },
+      ),
+    );
+  }
+
   Future<void> _handleRegister() async {
     setState(() => _isLoading = true);
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final lang = context.read<LanguageProvider>();
+
+    // Validate location
+    if (_selectedCountry == null || _selectedCity == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(lang.getText('select_location_error')),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    // Combine dial code and phone number
+    final fullPhoneNumber =
+        '${_phoneCountry.dialCode}${_phoneController.text.trim()}';
+
     final success = await authProvider.signUpWithEmail(
       email: _emailController.text.trim(),
       password: _passwordController.text,
       fullName: _nameController.text.trim(),
-      phoneNumber: _phoneController.text.trim(),
+      phoneNumber: fullPhoneNumber,
       bloodGroup: _selectedBloodGroup,
-      country: _selectedCountry,
-      city: _selectedCity,
+      country: _selectedCountry!,
+      city: _selectedCity!,
     );
 
     setState(() => _isLoading = false);
@@ -191,20 +250,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  @override
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>();
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.white, // White background so Red Blob is visible
+      backgroundColor: context.scaffoldBg,
       body: Stack(
         children: [
-          // 1. Blob Pattern (Fixed at top)
+          // 1. Blob Pattern
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: size.height * 0.4, // Reduced height for header only
+            height: size.height * 0.4,
             child: CustomPaint(painter: _BlobPainter(color: AppColors.primary)),
           ),
 
@@ -254,34 +314,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               initialValue: lang.currentLocale,
                               onSelected: (locale) =>
                                   lang.changeLanguage(locale),
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(
-                                  value: Locale('en'),
-                                  child: Row(
-                                    children: [
-                                      Text(
-                                        '🇺🇸',
-                                        style: TextStyle(fontSize: 20),
+                              itemBuilder: (context) =>
+                                  LanguageConfig.options.map((option) {
+                                    return PopupMenuItem(
+                                      value: Locale(option.code),
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            option.flag,
+                                            style: const TextStyle(
+                                              fontSize: 20,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(option.name),
+                                        ],
                                       ),
-                                      SizedBox(width: 12),
-                                      Text('English'),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: Locale('bn'),
-                                  child: Row(
-                                    children: [
-                                      Text(
-                                        '🇧🇩',
-                                        style: TextStyle(fontSize: 20),
-                                      ),
-                                      SizedBox(width: 12),
-                                      Text('Bangla'),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                                    );
+                                  }).toList(),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -290,9 +340,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 child: Row(
                                   children: [
                                     Text(
-                                      lang.currentLocale.languageCode == 'en'
-                                          ? '🇺🇸 ENG'
-                                          : '🇧🇩 BN',
+                                      '${LanguageConfig.getOption(lang.currentLocale.languageCode).flag} ${lang.currentLocale.languageCode.toUpperCase()}',
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
@@ -326,7 +374,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 24),
 
                       // Step Indicator
@@ -373,8 +420,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child:
                     Container(
                       width: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: context.cardBg,
                         borderRadius: BorderRadius.vertical(
                           top: Radius.circular(30),
                         ),
@@ -420,13 +467,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               lang.getText('basic_info'),
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+                color: context.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               lang.getText('basic_info_subtitle'),
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.textSecondary),
             ),
             const SizedBox(height: 32),
 
@@ -438,11 +485,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 prefixIcon: const Icon(Icons.person_outline),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: context.borderColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: context.borderColor),
                 ),
               ),
               validator: (value) {
@@ -463,11 +510,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 prefixIcon: const Icon(Icons.email_outlined),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: context.borderColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: context.borderColor),
                 ),
               ),
               validator: (value) {
@@ -482,40 +529,110 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 16),
 
-            TextFormField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: lang.getText('phone_number'),
-                prefixIcon: const Icon(Icons.phone_outlined),
-                hintText: '+880 1XXX-XXXXXX',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.border),
+            // Phone Number with Country Code
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  lang.getText('phone_number'),
+                  style: TextStyle(color: context.textSecondary, fontSize: 14),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.border),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Country Selector
+                    GestureDetector(
+                      onTap: _showCountrySelector,
+                      child: Container(
+                        height: 56,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: context.borderColor),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              _phoneCountry.flag,
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _phoneCountry.dialCode,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_drop_down,
+                              color: Colors.grey,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Phone Input
+                    Expanded(
+                      child: TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          hintText: '1234567890',
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 16,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: context.borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: context.borderColor),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return lang.getText('enter_phone');
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+              ],
             ),
             const SizedBox(height: 16),
 
             TextFormField(
               controller: _passwordController,
-              obscureText: true,
+              obscureText: !_isPasswordVisible,
               textInputAction: TextInputAction.done,
               decoration: InputDecoration(
                 labelText: lang.getText('password'),
                 prefixIcon: const Icon(Icons.lock_outlined),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                  ),
+                  onPressed: () =>
+                      setState(() => _isPasswordVisible = !_isPasswordVisible),
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: context.borderColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: context.borderColor),
                 ),
               ),
               validator: (value) {
@@ -556,7 +673,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 32), // Bottom padding
+            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -576,13 +693,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
             lang.getText('blood_info'),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              color: context.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             lang.getText('blood_group_q'),
-            style: TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: context.textSecondary),
           ),
           const SizedBox(height: 32),
 
@@ -608,10 +725,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primary
-                        : AppColors.surfaceVariant,
+                        : context.surfaceVariantBg,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.border,
+                      color: isSelected
+                          ? AppColors.primary
+                          : context.borderColor,
                       width: 2,
                     ),
                     boxShadow: isSelected
@@ -628,9 +747,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Text(
                       group,
                       style: TextStyle(
-                        color: isSelected
-                            ? Colors.white
-                            : AppColors.textPrimary,
+                        color: isSelected ? Colors.white : context.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
                       ),
@@ -664,7 +781,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 32), // Bottom padding
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -674,176 +791,258 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final lang = context.watch<LanguageProvider>();
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child:
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: context.cardBg,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: context.isDark
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : AppColors.primary.withValues(alpha: 0.08),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  lang.getText('your_location'),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  lang.getText('location_subtitle'),
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 32),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              lang.getText('your_location'),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: context.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              lang.getText('location_subtitle'),
+              style: TextStyle(color: context.textSecondary),
+            ),
+            const SizedBox(height: 32),
 
-                // Country Dropdown
-                DropdownButtonFormField<String>(
-                  value: _countries.any((c) => c['name'] == _selectedCountry)
-                      ? _selectedCountry
-                      : null,
-                  decoration: InputDecoration(
-                    labelText: lang.getText('country'),
-                    prefixIcon: const Icon(Icons.public),
-                    suffixIcon: _loadingLocations
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: AppColors.border),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: AppColors.border),
-                    ),
-                  ),
-                  items: _countries.isEmpty
-                      ? [
-                          const DropdownMenuItem(
-                            value: 'Bangladesh',
-                            child: Text('Bangladesh'),
-                          ),
-                        ]
-                      : _countries
-                            .map(
-                              (c) => DropdownMenuItem(
-                                value: c['name'] as String,
-                                child: Text(c['name'] as String),
-                              ),
-                            )
-                            .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _selectedCountry = value);
-                      _loadCities(value);
-                    }
+            // Country Selector
+            InkWell(
+              onTap: () {
+                GenericSelectionModal.show<Map<String, dynamic>>(
+                  context: context,
+                  title: lang.getText('select_country'),
+                  items: _countries,
+                  searchHint: lang.getText('search_country'),
+                  onSelect: (country) {
+                    final countryName = country['name'] as String;
+                    final countryCode = country['code'] as String?;
+
+                    // Resolve flag
+                    final configCountry = CountryConfig.countries.firstWhere(
+                      (c) => c.code == countryCode || c.name == countryName,
+                      orElse: () => CountryConfig.countries.firstWhere(
+                        (c) => c.code == 'BD',
+                        orElse: () => CountryConfig.countries[0],
+                      ),
+                    );
+
+                    setState(() {
+                      _selectedCountry = countryName;
+                      _selectedCountryFlag = configCountry.flag;
+                      _selectedCity = null; // Reset city on country change
+                    });
+                    _loadCities(countryName);
                   },
-                ),
-                const SizedBox(height: 16),
+                  itemBuilder: (context, country) {
+                    // Try to find flag from config
+                    final countryCode = country['code'] as String?;
+                    final countryName = country['name'] as String;
 
-                // City Dropdown
-                DropdownButtonFormField<String>(
-                  value: _cities.any((c) => c['name'] == _selectedCity)
-                      ? _selectedCity
-                      : null,
-                  decoration: InputDecoration(
-                    labelText: lang.getText('city'),
-                    prefixIcon: const Icon(Icons.location_city),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: AppColors.border),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: AppColors.border),
-                    ),
-                  ),
-                  items: _cities.isEmpty
-                      ? [
-                          const DropdownMenuItem(
-                            value: 'Dhaka',
-                            child: Text('Dhaka'),
-                          ),
-                        ]
-                      : _cities
-                            .map(
-                              (c) => DropdownMenuItem(
-                                value: c['name'] as String,
-                                child: Text(c['name'] as String),
-                              ),
-                            )
-                            .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _selectedCity = value);
-                    }
+                    final configCountry = CountryConfig.countries.firstWhere(
+                      (c) => c.code == countryCode || c.name == countryName,
+                      orElse: () => CountryConfig.countries.firstWhere(
+                        (c) => c.code == 'BD',
+                        orElse: () => CountryConfig.countries[0],
+                      ),
+                    );
+
+                    final flag = configCountry.flag;
+
+                    return ListTile(
+                      leading: Text(flag, style: const TextStyle(fontSize: 24)),
+                      title: Text(
+                        countryName,
+                        style: TextStyle(color: context.textPrimary),
+                      ),
+                      trailing: countryName == _selectedCountry
+                          ? Icon(Icons.check_circle, color: AppColors.primary)
+                          : null,
+                    );
                   },
+                  searchMatcher: (country, query) {
+                    final name = (country['name'] as String).toLowerCase();
+                    final code =
+                        (country['code'] as String?)?.toLowerCase() ?? '';
+                    return name.contains(query) || code.contains(query);
+                  },
+                );
+              },
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: lang.getText('country'),
+                  prefixIcon: const Icon(Icons.public),
+                  // Show loading or dropdown arrow
+                  suffixIcon: _loadingLocations
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.arrow_drop_down),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: context.borderColor),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: context.borderColor),
+                  ),
                 ),
-                const SizedBox(height: 48),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleRegister,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                child: Row(
+                  children: [
+                    if (_selectedCountry != null) ...[
+                      Text(
+                        _selectedCountryFlag,
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: Text(
+                        _selectedCountry ?? lang.getText('select_country'),
+                        style: TextStyle(
+                          color: _selectedCountry != null
+                              ? context.textPrimary
+                              : context.textTertiary,
+                          fontSize: 16,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            lang.getText('create_account'),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
+                  ],
                 ),
-
-                const SizedBox(height: 16),
-
-                Center(
-                  child: Text(
-                    lang.getText('terms_privacy'),
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ).animate().slideY(
-            begin: 0.2,
-            end: 0,
-            duration: 500.ms,
-            curve: Curves.easeOut,
-          ),
+            const SizedBox(height: 16),
+
+            // City Selector
+            InkWell(
+              onTap: _selectedCountry == null
+                  ? null
+                  : () {
+                      GenericSelectionModal.show<Map<String, dynamic>>(
+                        context: context,
+                        title: lang.getText('select_city'),
+                        items: _cities,
+                        searchHint: lang.getText('search_city'),
+                        onSelect: (city) {
+                          setState(
+                            () => _selectedCity = city['name'] as String,
+                          );
+                        },
+                        itemBuilder: (context, city) {
+                          final cityName = city['name'] as String;
+                          return ListTile(
+                            leading: Text(
+                              _selectedCountryFlag,
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                            title: Text(
+                              cityName,
+                              style: TextStyle(color: context.textPrimary),
+                            ),
+                            trailing: cityName == _selectedCity
+                                ? Icon(
+                                    Icons.check_circle,
+                                    color: AppColors.primary,
+                                  )
+                                : null,
+                          );
+                        },
+                        searchMatcher: (city, query) {
+                          final name = (city['name'] as String).toLowerCase();
+                          return name.contains(query);
+                        },
+                      );
+                    },
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: lang.getText('city'),
+                  prefixIcon: const Icon(Icons.location_city),
+                  suffixIcon: const Icon(Icons.arrow_drop_down),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: context.borderColor),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: context.borderColor),
+                  ),
+                ),
+                child: Text(
+                  _selectedCity ?? lang.getText('select_city'),
+                  style: TextStyle(
+                    color: _selectedCity != null
+                        ? context.textPrimary
+                        : context.textTertiary,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 48),
+
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _handleRegister,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        lang.getText('create_account'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            Center(
+              child: Text(
+                lang.getText('terms_privacy'),
+                style: TextStyle(color: context.textSecondary, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
