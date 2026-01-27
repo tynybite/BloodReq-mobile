@@ -184,6 +184,49 @@ class ApiService {
     }
   }
 
+  /// Make a PUT request
+  Future<ApiResponse<T>> put<T>(
+    String endpoint, {
+    Map<String, dynamic>? body,
+  }) async {
+    try {
+      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+
+      var response = await http
+          .put(
+            uri,
+            headers: _headers,
+            body: body != null ? jsonEncode(body) : null,
+          )
+          .timeout(ApiConfig.timeout);
+
+      // Handle 401 - try refresh token
+      if (response.statusCode == 401 && _refreshToken != null) {
+        final refreshed = await _refreshAccessToken();
+        if (refreshed) {
+          response = await http
+              .put(
+                uri,
+                headers: _headers,
+                body: body != null ? jsonEncode(body) : null,
+              )
+              .timeout(ApiConfig.timeout);
+        } else {
+          debugPrint('Persistent 401 detected in PUT. Clearing stale tokens.');
+          await clearTokens();
+        }
+      }
+
+      final json = jsonDecode(response.body);
+      return ApiResponse<T>.fromJson(json, response.statusCode);
+    } on TimeoutException {
+      return ApiResponse.error('Request timed out', statusCode: 408);
+    } catch (e) {
+      debugPrint('PUT $endpoint error: $e');
+      return ApiResponse.error(e.toString());
+    }
+  }
+
   /// Make a PATCH request
   Future<ApiResponse<T>> patch<T>(
     String endpoint, {

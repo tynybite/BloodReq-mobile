@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../shared/utils/avatar_utils.dart';
+import '../../../shared/widgets/donor_avatar_ring.dart';
+
 import '../../../core/constants/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 
@@ -37,16 +40,24 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 children: [
                   // Avatar
-                  CircleAvatar(
-                    radius: 48,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: Text(
-                      user?.initials ?? 'U',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                  DonorAvatarRing(
+                    isDonor: user?.isAvailableToDonate ?? false,
+                    child: CircleAvatar(
+                      radius: 48,
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      backgroundImage: AvatarUtils.getImageProvider(
+                        user?.avatarUrl,
                       ),
+                      child: !AvatarUtils.hasAvatar(user?.avatarUrl)
+                          ? Text(
+                              user?.initials ?? 'U',
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                   const SizedBox(height: 16),

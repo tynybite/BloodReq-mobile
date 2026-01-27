@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
@@ -8,8 +9,10 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_theme.dart';
 
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/scroll_control_provider.dart';
 import '../../../core/services/sync_service.dart';
 import '../../../core/models/blood_request.dart';
+import '../../../shared/widgets/request_card.dart';
 
 class BloodRequestsScreen extends StatefulWidget {
   const BloodRequestsScreen({super.key});
@@ -110,23 +113,26 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.scaffoldBg,
-      appBar: AppBar(
-        title: const Text('Blood Requests'),
-        backgroundColor: context.scaffoldBg,
-        surfaceTintColor: Colors.transparent,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterSheet,
-          ),
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: () async {
           await context.read<SyncService>().syncData();
           _refreshFromCache();
         },
-        child: _buildBody(),
+        child: NotificationListener<UserScrollNotification>(
+          onNotification: (notification) {
+            final scrollProvider = Provider.of<ScrollControlProvider>(
+              context,
+              listen: false,
+            );
+            if (notification.direction == ScrollDirection.reverse) {
+              scrollProvider.hideBottomNav();
+            } else if (notification.direction == ScrollDirection.forward) {
+              scrollProvider.showBottomNav();
+            }
+            return true;
+          },
+          child: _buildBody(),
+        ),
       ),
     );
   }
@@ -173,56 +179,90 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
 
     // Standard Mode Empty State
     if (_requests.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.water_drop_outlined,
-              size: 80,
-              color: AppColors.textTertiary,
+      return CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(),
+          SliverFillRemaining(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.water_drop_outlined,
+                    size: 80,
+                    color: AppColors.textTertiary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No blood requests found',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Be the first to request blood',
+                    style: TextStyle(color: AppColors.textTertiary),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => context.push('/create-request'),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create Request'),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No blood requests found',
-              style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Be the first to request blood',
-              style: TextStyle(color: AppColors.textTertiary),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => context.push('/create-request'),
-              icon: const Icon(Icons.add),
-              label: const Text('Create Request'),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
     // Standard Mode List
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _requests.length,
-      itemBuilder: (context, index) {
-        final request = _requests[index];
-        return _RequestCard(
-              request: request,
-              onTap: () => context.push('/request/${request.id}'),
-            )
-            .animate(delay: Duration(milliseconds: index * 50))
-            .fadeIn(duration: 300.ms)
-            .slideY(begin: 0.1, end: 0);
-      },
+    return CustomScrollView(
+      slivers: [
+        _buildSliverAppBar(),
+        SliverPadding(
+          padding: const EdgeInsets.all(16),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final request = _requests[index];
+              return RequestCard(
+                    request: request,
+                    onTap: () => context.push('/request/${request.id}'),
+                  )
+                  .animate(delay: Duration(milliseconds: index * 50))
+                  .fadeIn(duration: 300.ms)
+                  .slideY(begin: 0.1, end: 0);
+            }, childCount: _requests.length),
+          ),
+        ),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+      ],
+    );
+  }
+
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      title: const Text('Blood Requests'),
+      backgroundColor: context.scaffoldBg,
+      surfaceTintColor: Colors.transparent,
+      floating: true,
+      snap: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.filter_list),
+          onPressed: _showFilterSheet,
+        ),
+      ],
     );
   }
 
   Widget _buildSplitList() {
     return CustomScrollView(
       slivers: [
+        _buildSliverAppBar(),
         if (_matchingRequests.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: Padding(
@@ -247,7 +287,7 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
               final request = _matchingRequests[index];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _RequestCard(
+                child: RequestCard(
                   request: request,
                   onTap: () => context.push('/request/${request.id}'),
                 ).animate().fadeIn().slideX(),
@@ -273,7 +313,7 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
               final request = _otherRequests[index];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _RequestCard(
+                child: RequestCard(
                   request: request,
                   onTap: () => context.push('/request/${request.id}'),
                 ).animate().fadeIn(),
@@ -281,7 +321,7 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
             }, childCount: _otherRequests.length),
           ),
         ],
-        const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
       ],
     );
   }
@@ -418,159 +458,6 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _RequestCard extends StatelessWidget {
-  final BloodRequest request;
-  final VoidCallback onTap;
-
-  const _RequestCard({required this.request, required this.onTap});
-
-  Color get urgencyColor {
-    switch (request.urgency) {
-      case 'critical':
-        return AppColors.urgencyCritical;
-      case 'urgent':
-        return AppColors.urgencyUrgent;
-      default:
-        return AppColors.urgencyPlanned;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: context.cardBg,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Blood Group Badge
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Center(
-                child: Text(
-                  request.bloodGroup,
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-
-            // Details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    request.patientName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.local_hospital_outlined,
-                        size: 14,
-                        color: AppColors.textTertiary,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          request.hospital,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 14,
-                        color: AppColors.textTertiary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        request
-                            .location, // Assuming city is part of location or not available in new model yet
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textTertiary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Urgency & Units
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: urgencyColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    request.urgency.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: urgencyColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${request.units} unit${request.units > 1 ? 's' : ''}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

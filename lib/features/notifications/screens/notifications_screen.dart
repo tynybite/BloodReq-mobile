@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
@@ -22,11 +23,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   String? _error;
   bool _notificationsEnabled = false;
 
+  StreamSubscription? _notificationSubscription;
+
   @override
   void initState() {
     super.initState();
     _checkPermissions();
     _loadNotifications();
+    _setupStreamListener();
+  }
+
+  void _setupStreamListener() {
+    _notificationSubscription = _notificationService.notificationStream.listen((
+      _,
+    ) {
+      _loadNotifications();
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkPermissions() async {
@@ -70,6 +88,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _requestPermissions() async {
     final granted = await _notificationService.requestPermission();
     setState(() => _notificationsEnabled = granted);
+  }
+
+  Future<void> _markAllRead() async {
+    setState(() => _isLoading = true);
+
+    final response = await _api.put('/notifications', body: {});
+
+    if (response.success) {
+      // Optimistically update local state
+      setState(() {
+        _notifications = _notifications
+            .map((n) => {...n, 'is_read': true})
+            .toList();
+        _isLoading = false;
+      });
+    } else {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to mark all as read')),
+        );
+      }
+    }
   }
 
   IconData _getNotificationIcon(String? type) {
@@ -117,9 +158,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         actions: [
           if (_notifications.isNotEmpty)
             TextButton(
-              onPressed: () {
-                // Mark all as read
-              },
+              onPressed: _markAllRead,
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
               child: const Text('Mark all read'),
             ),
         ],
@@ -237,6 +277,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               type: notif['type'],
               createdAt: notif['created_at'],
               isRead: notif['is_read'] ?? false,
+              isActionable: notif['is_actionable'] ?? false,
+              payload: notif['payload'],
               icon: _getNotificationIcon(notif['type']),
               color: _getNotificationColor(notif['type']),
               onTap: () {
@@ -257,6 +299,8 @@ class _NotificationCard extends StatelessWidget {
   final String? type;
   final String? createdAt;
   final bool isRead;
+  final bool isActionable;
+  final Map<String, dynamic>? payload;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
@@ -267,6 +311,8 @@ class _NotificationCard extends StatelessWidget {
     this.type,
     this.createdAt,
     required this.isRead,
+    this.isActionable = false,
+    this.payload,
     required this.icon,
     required this.color,
     required this.onTap,
@@ -314,66 +360,104 @@ class _NotificationCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(width: 14),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: color, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: TextStyle(
-                            fontWeight: isRead
-                                ? FontWeight.w500
-                                : FontWeight.bold,
-                            fontSize: 14,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: TextStyle(
+                                fontWeight: isRead
+                                    ? FontWeight.w500
+                                    : FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
-                        ),
+                          Text(
+                            _formatTime(createdAt),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 4),
                       Text(
-                        _formatTime(createdAt),
+                        body,
                         style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textTertiary,
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
                         ),
+                        maxLines: isActionable ? 4 : 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    body,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
+                ),
+                if (!isRead) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
-              ),
+              ],
             ),
-
-            if (!isRead) ...[
-              const SizedBox(width: 8),
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            if (isActionable) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        // Dismiss/Mark read
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
+                        side: BorderSide(color: AppColors.border),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text('Dismiss'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: onTap,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: color,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text('View Now'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ],

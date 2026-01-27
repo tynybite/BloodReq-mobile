@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../../../core/providers/scroll_control_provider.dart';
 
 import '../../../core/constants/app_theme.dart';
 
@@ -47,41 +50,55 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       body: widget.child,
       extendBody: true,
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            // White pill with nav items
-            Expanded(
-              child: Container(
-                height: 68,
-                decoration: BoxDecoration(
-                  color: context.cardBg,
-                  borderRadius: BorderRadius.circular(34),
-                  boxShadow: [
-                    BoxShadow(
-                      color: context.shadowColor,
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
+      bottomNavigationBar: Consumer<ScrollControlProvider>(
+        builder: (context, scrollProvider, child) {
+          return AnimatedSlide(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            offset: scrollProvider.isBottomNavVisible
+                ? Offset.zero
+                : const Offset(0, 2), // Slide down out of view
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              margin: const EdgeInsets.only(
+                bottom: 20,
+              ), // Add explicit bottom margin since we extend body
+              child: Row(
+                children: [
+                  // White pill with nav items
+                  Expanded(
+                    child: Container(
+                      height: 68,
+                      decoration: BoxDecoration(
+                        color: context.cardBg,
+                        borderRadius: BorderRadius.circular(34),
+                        boxShadow: [
+                          BoxShadow(
+                            color: context.shadowColor,
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: List.generate(
+                          _navItems.length,
+                          (index) => _buildNavItem(index),
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: List.generate(
-                    _navItems.length,
-                    (index) => _buildNavItem(index),
                   ),
-                ),
+
+                  const SizedBox(width: 12),
+
+                  // Plus button
+                  _buildPlusButton(),
+                ],
               ),
             ),
-
-            const SizedBox(width: 12),
-
-            // Plus button
-            _buildPlusButton(),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

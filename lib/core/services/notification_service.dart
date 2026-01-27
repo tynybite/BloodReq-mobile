@@ -1,5 +1,6 @@
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 
 import 'api_service.dart';
 
@@ -50,11 +51,18 @@ class NotificationService {
     }
   }
 
+  // Stream for notification events
+  final _notificationStreamController =
+      StreamController<OSNotification>.broadcast();
+  Stream<OSNotification> get notificationStream =>
+      _notificationStreamController.stream;
+
   /// Set up notification handlers
   void _setupNotificationHandlers() {
     // Handle notification clicks
     OneSignal.Notifications.addClickListener((event) {
       debugPrint('🔔 Notification clicked: ${event.notification.body}');
+      _notificationStreamController.add(event.notification);
       _handleNotificationClick(event.notification);
     });
 
@@ -63,6 +71,7 @@ class NotificationService {
       debugPrint(
         '🔔 Notification received in foreground: ${event.notification.body}',
       );
+      _notificationStreamController.add(event.notification);
       // You can prevent the notification from displaying by calling:
       // event.preventDefault();
       // Or just let it display normally

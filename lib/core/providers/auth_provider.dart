@@ -504,7 +504,12 @@ class AuthProvider with ChangeNotifier {
   /// Update user profile
   Future<bool> updateProfile(Map<String, dynamic> updates) async {
     try {
+      debugPrint('📤 Updating profile with keys: ${updates.keys.toList()}');
       final response = await _api.patch(ApiEndpoints.profile, body: updates);
+
+      debugPrint(
+        '📥 Profile update response: success=${response.success}, status=${response.statusCode}, message=${response.message}',
+      );
 
       if (response.success) {
         await _loadUserProfile();
@@ -512,8 +517,10 @@ class AuthProvider with ChangeNotifier {
         return true;
       }
 
+      _error = response.message ?? 'Failed to update profile';
       return false;
     } catch (e) {
+      debugPrint('❌ Profile update exception: $e');
       _error = e.toString();
       return false;
     }

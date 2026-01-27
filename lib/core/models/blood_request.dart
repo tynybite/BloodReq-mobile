@@ -69,22 +69,25 @@ class BloodRequest extends HiveObject {
 
   factory BloodRequest.fromJson(Map<String, dynamic> json) {
     return BloodRequest(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       requestType: json['request_type'] ?? 'blood_request',
       patientName: json['patient_name'] ?? 'Unknown',
       bloodGroup: json['blood_group'] ?? '',
       units: json['units'] ?? 1,
-      hospital: json['hospital_name'] ?? '',
+      hospital: json['hospital'] ?? json['hospital_name'] ?? '',
       requiredDate: DateTime.parse(
         json['required_date'] ?? DateTime.now().toIso8601String(),
       ),
       contactNumber: json['contact_number'] ?? '',
       urgency: json['urgency'] ?? 'normal',
       status: json['status'] ?? 'active',
-      location: json['location']?['address'] ?? '',
-      userId: json['user_id'] ?? '',
-      latitude: (json['location']?['latitude'] ?? 0.0).toDouble(),
-      longitude: (json['location']?['longitude'] ?? 0.0).toDouble(),
+      location:
+          json['address'] ?? json['city'] ?? json['location']?['address'] ?? '',
+      userId: json['user_id'] ?? json['requester']?['id'] ?? '',
+      latitude: (json['latitude'] ?? json['location']?['latitude'] ?? 0.0)
+          .toDouble(),
+      longitude: (json['longitude'] ?? json['location']?['longitude'] ?? 0.0)
+          .toDouble(),
       createdAt: DateTime.parse(
         json['created_at'] ?? DateTime.now().toIso8601String(),
       ),

@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'core/services/sync_service.dart';
 import 'core/providers/language_provider.dart';
+import 'core/providers/scroll_control_provider.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/constants/theme_config.dart';
@@ -27,7 +30,11 @@ void main() async {
   await NotificationService().initialize();
 
   // Request other permissions (Location)
+  // Request other permissions (Location)
   await _requestPermissions();
+
+  // Set High Refresh Rate
+  await _setHighRefreshRate();
 
   // Initialize Services
   final syncService = SyncService();
@@ -40,6 +47,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ScrollControlProvider()),
         ChangeNotifierProvider.value(value: syncService),
         ChangeNotifierProvider.value(value: languageProvider),
       ],
@@ -83,5 +91,15 @@ Future<void> _requestPermissions() async {
     }
   } catch (e) {
     debugPrint('Error requesting permissions: $e');
+  }
+}
+
+Future<void> _setHighRefreshRate() async {
+  try {
+    if (Platform.isAndroid) {
+      await FlutterDisplayMode.setHighRefreshRate();
+    }
+  } catch (e) {
+    debugPrint('Error setting high refresh rate: $e');
   }
 }

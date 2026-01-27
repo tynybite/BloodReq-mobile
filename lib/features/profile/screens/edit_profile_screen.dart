@@ -1,11 +1,16 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../shared/utils/app_toast.dart';
+import '../../../shared/utils/avatar_utils.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -16,12 +21,16 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _picker = ImagePicker();
 
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   String _selectedBloodGroup = 'O+';
   bool _isAvailable = true;
   bool _isLoading = false;
+
+  File? _imageFile;
+  String? _currentAvatarUrl;
 
   @override
   void initState() {
@@ -31,6 +40,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneController = TextEditingController(text: user?.phoneNumber ?? '');
     _selectedBloodGroup = user?.bloodGroup ?? 'O+';
     _isAvailable = user?.isAvailableToDonate ?? true;
+    _currentAvatarUrl = user?.avatarUrl;
   }
 
   @override
@@ -40,18 +50,116 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    try {
+      showModalBottomSheet(
+        context: context,
+        builder: (ctx) => SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final picked = await _picker.pickImage(
+                    source: ImageSource.gallery,
+                    maxWidth: 400, // Smaller for Base64 storage
+                    maxHeight: 400,
+                    imageQuality: 30, // More compression for smaller file size
+                  );
+                  if (picked != null) {
+                    setState(() => _imageFile = File(picked.path));
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final picked = await _picker.pickImage(
+                    source: ImageSource.camera,
+                    maxWidth: 400, // Smaller for Base64 storage
+                    maxHeight: 400,
+                    imageQuality: 30, // More compression for smaller file size
+                  );
+                  if (picked != null) {
+                    setState(() => _imageFile = File(picked.path));
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) AppToast.error(context, 'Failed to pick image');
+    }
+  }
+
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String? newAvatarUrl = _currentAvatarUrl;
+
+    // 1. Process Image if Changed
+    if (_imageFile != null) {
+      try {
+        final userId = authProvider.user?.id;
+        if (userId != null) {
+          // Save image locally for future Plesk upload
+          final appDir = await getApplicationDocumentsDirectory();
+          final avatarDir = Directory('${appDir.path}/avatars');
+          if (!await avatarDir.exists()) {
+            await avatarDir.create(recursive: true);
+          }
+
+          final extension = _imageFile!.path.split('.').last.toLowerCase();
+          final localPath = '${avatarDir.path}/$userId.$extension';
+          await _imageFile!.copy(localPath);
+
+          // For now, store as optimized Base64 (will be replaced with Plesk URL later)
+          // Image is already compressed by image_picker (maxWidth: 400, quality: 30)
+          final bytes = await _imageFile!.readAsBytes();
+          final base64String = base64Encode(bytes);
+          final mimeType = ['jpg', 'jpeg'].contains(extension)
+              ? 'image/jpeg'
+              : 'image/$extension';
+
+          newAvatarUrl = 'data:$mimeType;base64,$base64String';
+
+          debugPrint('Avatar saved locally to: $localPath');
+          debugPrint('Base64 length: ${base64String.length} chars');
+        }
+      } catch (e) {
+        debugPrint('Error processing image: $e');
+        setState(() => _isLoading = false);
+        if (mounted) {
+          AppToast.error(context, 'Failed to process profile photo');
+        }
+        return;
+      }
+    }
+
+    // 2. Update Profile
+    debugPrint('🚀 Calling updateProfile...');
+    debugPrint(
+      '🔗 Avatar URL prefix: ${newAvatarUrl?.substring(0, newAvatarUrl.length > 50 ? 50 : newAvatarUrl.length)}...',
+    );
+
     final success = await authProvider.updateProfile({
       'full_name': _nameController.text.trim(),
       'phone_number': _phoneController.text.trim(),
       'blood_group': _selectedBloodGroup,
       'is_available_to_donate': _isAvailable,
+      'avatar_url': newAvatarUrl,
     });
+
+    debugPrint('✅ updateProfile returned: $success');
 
     setState(() => _isLoading = false);
 
@@ -59,6 +167,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       AppToast.success(context, 'Profile updated successfully');
       context.pop();
     } else if (mounted) {
+      debugPrint('❌ Profile update failed: ${authProvider.error}');
       AppToast.error(context, authProvider.error ?? 'Failed to update profile');
     }
   }
@@ -93,32 +202,43 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             Center(
               child: Stack(
                 children: [
-                  CircleAvatar(
-                    radius: 56,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: Text(
-                      _getInitials(_nameController.text),
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: CircleAvatar(
+                      radius: 56,
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      backgroundImage: _imageFile != null
+                          ? FileImage(_imageFile!) as ImageProvider
+                          : AvatarUtils.getImageProvider(_currentAvatarUrl),
+                      child: (_imageFile == null && _currentAvatarUrl == null)
+                          ? Text(
+                              _getInitials(_nameController.text),
+                              style: TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                   Positioned(
                     bottom: 0,
                     right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 20,
+                    child: GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
