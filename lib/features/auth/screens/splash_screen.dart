@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +19,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   bool _isOffline = false;
+  bool _showRetry = false;
 
   @override
   void initState() {
@@ -27,9 +29,17 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<bool> _hasInternet() async {
     try {
-      final result = await InternetAddress.lookup('google.com');
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 5));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } on SocketException catch (_) {
+      return false;
+    } on TimeoutException catch (_) {
+      debugPrint('🔻 SplashScreen: DNS lookup timed out.');
+      return false;
+    } catch (e) {
+      debugPrint('🔻 SplashScreen: DNS lookup error: $e');
       return false;
     }
   }
@@ -60,7 +70,12 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _retryConnection() async {
-    if (mounted) setState(() => _isOffline = false); // Show loader again
+    if (mounted) {
+      setState(() {
+        _isOffline = false;
+        _showRetry = false;
+      });
+    }
 
     // Check network again
     final connectivityResult = await Connectivity().checkConnectivity();
@@ -121,6 +136,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
       // Timeout after 10 seconds (increased for slow networks)
       if (attempts > 50 || !mounted) break;
+
+      // Show retry button if taking longer than 5 seconds
+      if (attempts > 25 && !_showRetry && mounted) {
+        setState(() => _showRetry = true);
+      }
     }
 
     if (!mounted) return;
@@ -202,14 +222,55 @@ class _SplashScreenState extends State<SplashScreen> {
               const SizedBox(height: 48),
 
               // Loading indicator
-              const SizedBox(
-                width: 30,
-                height: 30,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ).animate(delay: 800.ms).fadeIn(duration: 400.ms),
+              if (_showRetry)
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Column(
+                    children: [
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white70,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.2,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            onPressed: _retryConnection,
+                            icon: const Icon(Icons.refresh, size: 20),
+                            label: const Text('Taking too long? Tap to Retry'),
+                          )
+                          .animate()
+                          .fadeIn(duration: 400.ms)
+                          .slideY(begin: 0.2, end: 0),
+                    ],
+                  ),
+                )
+              else
+                const SizedBox(
+                  width: 30,
+                  height: 30,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ).animate(delay: 800.ms).fadeIn(duration: 400.ms),
             ],
           ),
         ),

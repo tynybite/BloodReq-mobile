@@ -31,21 +31,47 @@ class AuthProvider with ChangeNotifier {
     _status = AuthStatus.loading;
     notifyListeners();
 
-    try {
-      await _api.init();
+    debugPrint('🔐 AuthProvider: Checking auth status...');
 
-      if (_api.hasToken) {
-        await _loadUserProfile();
-        _status = AuthStatus.authenticated;
-      } else {
-        _status = AuthStatus.unauthenticated;
-      }
+    try {
+      // Add a strict timeout to the entire init process
+      await Future.any([
+        _initializeAuth(),
+        Future.delayed(const Duration(seconds: 5), () {
+          throw Exception('Auth check timed out');
+        }),
+      ]);
     } catch (e) {
+      debugPrint('❌ AuthProvider: Auth check error/timeout: $e');
       _status = AuthStatus.unauthenticated;
       _error = e.toString();
     }
 
     notifyListeners();
+  }
+
+  Future<void> _initializeAuth() async {
+    await _api.init();
+
+    if (_api.hasToken) {
+      debugPrint('🔐 AuthProvider: Token found, loading profile...');
+      await _loadUserProfile();
+
+      // If loadUserProfile fails, we might still want to consider them unauthenticated
+      // or authenticated but offline. For now, let's assume if we have a token
+      // but can't fetch profile, we might need to re-login or use cached data.
+      // But _loadUserProfile sets _user. If _user is null, we are effectively not fully auth'd.
+      if (_user != null) {
+        _status = AuthStatus.authenticated;
+        debugPrint('✅ AuthProvider: User authenticated as ${_user!.email}');
+      } else {
+        debugPrint('⚠️ AuthProvider: Token exists but profile load failed.');
+        _status = AuthStatus.unauthenticated;
+      }
+    } else {
+      debugPrint('🔐 AuthProvider: No token found.');
+      _status = AuthStatus.unauthenticated;
+    }
   }
 
   // Public retry method

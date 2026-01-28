@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_theme.dart';
@@ -331,6 +332,33 @@ class _DonationCard extends StatelessWidget {
               ],
             ],
           ),
+
+          // Verify Button for Donor
+          if (donation['status'] == 'offered' ||
+              donation['status'] == 'accepted')
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    final requestId =
+                        request['id'] ??
+                        request['_id'] ??
+                        donation['request_id'];
+                    if (requestId != null) {
+                      context.push('/verify/$requestId', extra: false);
+                    }
+                  },
+                  icon: const Icon(Icons.pin),
+                  label: const Text('Enter Verification Code'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/app_theme.dart';
 import '../../core/models/blood_request.dart';
@@ -107,6 +108,25 @@ class RequestCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 14,
+                        color: AppColors.error,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Needed: ${DateFormat('MMM d').format(request.requiredDate)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.error,
                         ),
                       ),
                     ],

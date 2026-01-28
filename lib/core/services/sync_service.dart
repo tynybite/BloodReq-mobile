@@ -39,7 +39,14 @@ class SyncService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _api.get<dynamic>(ApiEndpoints.bloodRequests);
+      // 1. Sync Pending Verifications (Offline -> Online)
+      await _syncPendingVerifications();
+
+      // 2. Fetch Latest Requests (Online -> Offline)
+      // Only fetch approved requests for public list
+      final response = await _api.get<dynamic>(
+        '${ApiEndpoints.bloodRequests}?status=approved',
+      );
 
       if (response.success && response.data != null) {
         List<dynamic> rawList = [];
@@ -65,6 +72,45 @@ class SyncService extends ChangeNotifier {
     } finally {
       _isSyncing = false;
       notifyListeners();
+    }
+  }
+
+  /// Process offline verifications
+  Future<void> _syncPendingVerifications() async {
+    final pending = _cache.getPendingVerifications();
+    if (pending.isEmpty) return;
+
+    debugPrint(
+      '🔄 SyncService: Processing ${pending.length} pending verifications...',
+    );
+
+    for (final verification in pending) {
+      try {
+        final response = await _api.post(
+          '/donations/verify', // Use constant if available, else literal for now
+          body: {
+            'request_id': verification.requestId,
+            'donor_id': verification.donorId,
+            'verification_code': verification.verificationCode,
+            'timestamp': verification.timestamp.toIso8601String(),
+          },
+        );
+
+        if (response.success) {
+          debugPrint(
+            '✅ SyncService: Verification synced for ${verification.requestId}',
+          );
+          await _cache.removePendingVerification(verification);
+        } else {
+          debugPrint(
+            '⚠️ SyncService: Verification sync failed: ${response.message}',
+          );
+          // Keep in cache to retry later?
+          // If 400 (invalid code), maybe remove? For now, keep it to be safe.
+        }
+      } catch (e) {
+        debugPrint('❌ SyncService: Error syncing verification: $e');
+      }
     }
   }
 

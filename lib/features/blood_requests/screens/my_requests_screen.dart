@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
+import '../../../shared/widgets/blob_background.dart';
 
 class MyRequestsScreen extends StatelessWidget {
   const MyRequestsScreen({super.key});
@@ -12,43 +14,45 @@ class MyRequestsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        backgroundColor: context.scaffoldBg,
-        appBar: AppBar(
-          title: const Text('My Requests'),
-          backgroundColor: context.scaffoldBg,
-          surfaceTintColor: Colors.transparent,
-          bottom: TabBar(
-            splashFactory: NoSplash.splashFactory,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textTertiary,
-            indicatorColor: AppColors.primary,
-            indicatorSize: TabBarIndicatorSize.tab,
-            dividerColor: Colors.transparent,
-            tabs: const [
-              Tab(text: 'Blood Requests'),
-              Tab(text: 'Fundraisers'),
-            ],
+      child: BlobBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: const Text('My Requests'),
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            bottom: TabBar(
+              splashFactory: NoSplash.splashFactory,
+              labelColor: AppColors.primary,
+              unselectedLabelColor: AppColors.textTertiary,
+              indicatorColor: AppColors.primary,
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              tabs: const [
+                Tab(text: 'Blood Requests'),
+                Tab(text: 'Fundraisers'),
+              ],
+            ),
           ),
-        ),
-        body: const TabBarView(
-          children: [_BloodRequestsTab(), _FundRequestsTab()],
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            // Show logical modal or separate actions?
-            // For now, let's just go to create request for blood, or show modal
-            // User requested merging. "or we can merge Fund request and blood request to My requests and inside that devide tabs"
-            // The FAB might need to change based on tab.
-            // Or just show a modal to choose which one to create.
-            // For simplicity/MVP, let's keep it simple or remove FAB and put generic "Add" button that asks "Blood or Fundraiser?"
-            // But since the current screen had specific logic, let's make FAB sensitive to Tab?
-            // DefaultTabController doesn't easily expose index to Scaffold.
-            // So we'll convert to StatefulWidget to track index.
-            _showCreateOptions(context);
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('New Request'),
+          body: const TabBarView(
+            children: [_BloodRequestsTab(), _FundRequestsTab()],
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () {
+              // Show logical modal or separate actions?
+              // For now, let's just go to create request for blood, or show modal
+              // User requested merging. "or we can merge Fund request and blood request to My requests and inside that devide tabs"
+              // The FAB might need to change based on tab.
+              // Or just show a modal to choose which one to create.
+              // For simplicity/MVP, let's keep it simple or remove FAB and put generic "Add" button that asks "Blood or Fundraiser?"
+              // But since the current screen had specific logic, let's make FAB sensitive to Tab?
+              // DefaultTabController doesn't easily expose index to Scaffold.
+              // So we'll convert to StatefulWidget to track index.
+              _showCreateOptions(context);
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('New Request'),
+          ),
         ),
       ),
     );
@@ -417,64 +421,111 @@ class _RequestCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Center(
-                child: Text(
-                  request['blood_group'] ?? '?',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+            Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    request['patient_name'] ?? 'Patient',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
+                  child: Center(
+                    child: Text(
+                      request['blood_group'] ?? '?',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    request['hospital'] ?? '',
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        request['patient_name'] ?? 'Patient',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        request['hospital'] ?? '',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      if (request['required_date'] != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_outlined,
+                              size: 12,
+                              color: AppColors.error,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Needed: ${DateFormat('MMM d').format(DateTime.parse(request['required_date']))}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.error,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    (request['status'] ?? 'pending').toString().toUpperCase(),
                     style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                (request['status'] ?? 'pending').toString().toUpperCase(),
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: statusColor,
+            // Show Verify Button if active/pending
+            if (request['status'] == 'pending' ||
+                request['status'] == 'approved') ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    context.push('/verify/${request['id']}', extra: true);
+                  },
+                  icon: const Icon(Icons.qr_code),
+                  label: const Text('Verify Donor'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary),
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

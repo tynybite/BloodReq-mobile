@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/blood_request.dart';
+import '../models/pending_verification.dart';
 
 class CacheService {
   static const String _boxName = 'blood_requests_cache';
@@ -8,7 +9,11 @@ class CacheService {
   Future<void> init() async {
     await Hive.initFlutter();
     Hive.registerAdapter(BloodRequestAdapter());
+    Hive.registerAdapter(PendingVerificationAdapter());
     _box = await Hive.openBox<BloodRequest>(_boxName);
+    _verificationBox = await Hive.openBox<PendingVerification>(
+      _verificationBoxName,
+    );
   }
 
   /// Get all cached blood requests
@@ -34,5 +39,23 @@ class CacheService {
   /// Clear cache
   Future<void> clear() async {
     await _box.clear();
+  }
+
+  // --- Pending Verifications (Offline) ---
+  static const String _verificationBoxName = 'pending_verifications';
+  late Box<PendingVerification> _verificationBox;
+
+  Future<void> savePendingVerification(PendingVerification verification) async {
+    await _verificationBox.add(verification);
+  }
+
+  List<PendingVerification> getPendingVerifications() {
+    return _verificationBox.values.toList();
+  }
+
+  Future<void> removePendingVerification(
+    PendingVerification verification,
+  ) async {
+    await verification.delete();
   }
 }

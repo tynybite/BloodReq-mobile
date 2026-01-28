@@ -24,6 +24,7 @@ import '../../features/profile/screens/profile_screen.dart';
 import '../../features/profile/screens/edit_profile_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/verification/screens/verification_screen.dart';
 
 class RouterService {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -169,6 +170,21 @@ class RouterService {
       GoRoute(
         path: '/create-fundraiser',
         builder: (context, state) => const CreateFundraiserScreen(),
+      ),
+      GoRoute(
+        path: '/create-fundraiser',
+        builder: (context, state) => const CreateFundraiserScreen(),
+      ),
+      GoRoute(
+        path: '/verify/:requestId',
+        builder: (context, state) {
+          final requestId = state.pathParameters['requestId']!;
+          final isRequestor = state.extra as bool? ?? false;
+          return VerificationScreen(
+            requestId: requestId,
+            isRequestor: isRequestor,
+          );
+        },
       ),
     ],
     errorBuilder: (context, state) =>
