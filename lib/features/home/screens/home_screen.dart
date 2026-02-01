@@ -14,6 +14,8 @@ import '../../../core/services/sync_service.dart';
 import '../../../core/models/blood_request.dart';
 import '../../../shared/widgets/request_card.dart';
 import '../../../shared/widgets/fundraiser_card.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 import '../widgets/hero_carousel.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -31,6 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadFeed();
+  }
+
+  int _calculateTotalItemCount() {
+    if (_unifiedFeed.isEmpty) return 0;
+    final adCount = (_unifiedFeed.length / 3).floor();
+    return _unifiedFeed.length + adCount;
   }
 
   Future<void> _loadFeed() async {
@@ -297,6 +305,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         .slideY(begin: 0.05, end: 0),
               ),
 
+              // Banner Ad - After Hero Carousel
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: BannerAdWidget(height: 50),
+                ),
+              ),
+
               // Quick Stats
               SliverToBoxAdapter(
                 child: Padding(
@@ -374,6 +390,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
+              // Banner Ad - After Quick Actions
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: BannerAdWidget(height: 50),
+                ),
+              ),
+
               // Recent Updates Section (Unified Feed)
               SliverToBoxAdapter(
                 child: Padding(
@@ -414,7 +438,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
-                      final item = _unifiedFeed[index];
+                      // Insert native ad after every 3 items
+                      if (index > 0 && index % 4 == 0) {
+                        return const NativeAdCard().animate().fadeIn().slideY(
+                          begin: 0.1,
+                          end: 0,
+                        );
+                      }
+
+                      // Calculate actual item index (accounting for ads)
+                      final itemIndex = index - (index ~/ 4);
+                      if (itemIndex >= _unifiedFeed.length) {
+                        return const SizedBox.shrink();
+                      }
+
+                      final item = _unifiedFeed[itemIndex];
                       if (item is BloodRequest) {
                         return RequestCard(
                           request: item,
@@ -428,7 +466,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               context.push('/fundraiser/${item['id']}'),
                         ).animate().fadeIn().slideY(begin: 0.1, end: 0);
                       }
-                    }, childCount: _unifiedFeed.length),
+                    }, childCount: _calculateTotalItemCount()),
                   ),
                 ),
 

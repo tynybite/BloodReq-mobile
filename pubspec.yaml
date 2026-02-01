@@ -62,6 +62,9 @@ dependencies:
   path_provider: ^2.1.4
   flutter_displaymode: ^0.7.0
 
+  # Ads
+  facebook_audience_network: ^1.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

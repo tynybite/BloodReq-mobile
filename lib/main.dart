@@ -15,6 +15,7 @@ import 'core/providers/theme_provider.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/services/router_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/ad_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +29,9 @@ void main() async {
 
   // Initialize push notifications
   await NotificationService().initialize();
+
+  // Initialize Facebook Audience Network
+  await AdService().initialize();
 
   // Request other permissions (Location)
   // Request other permissions (Location)
