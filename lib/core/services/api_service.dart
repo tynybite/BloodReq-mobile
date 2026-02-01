@@ -46,26 +46,48 @@ class ApiService {
   ApiService._internal();
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  // We keep these for non-firebase scenarios or fallback, but primary source is FirebaseAuth
   String? _accessToken;
-  String? _refreshToken;
 
   /// Initialize with stored tokens
   Future<void> init() async {
     _accessToken = await _storage.read(key: AppConstants.accessTokenKey);
-    _refreshToken = await _storage.read(key: AppConstants.refreshTokenKey);
   }
 
-  /// Get authorization headers
-  Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
-  };
+  /// Helper to get the most up-to-date valid token
+  Future<String?> _getValidToken() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // getIdToken(false) returns the cached token if valid, or refreshes it if expired.
+        // This handles the lifecycle automatically.
+        final token = await user.getIdToken();
+        if (token != null) {
+          // Update local cache just in case
+          _accessToken = token;
+          return token;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching fresh token: $e');
+    }
+    return _accessToken;
+  }
+
+  /// Get authorization headers with a specific token
+  Map<String, String> _getHeaders(String? token) {
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
 
   /// Save tokens after login/signup
   Future<void> saveTokens(String accessToken, String refreshToken) async {
     _accessToken = accessToken;
-    _refreshToken = refreshToken;
+
     await _storage.write(key: AppConstants.accessTokenKey, value: accessToken);
     await _storage.write(
       key: AppConstants.refreshTokenKey,
@@ -76,31 +98,12 @@ class ApiService {
   /// Clear tokens on logout
   Future<void> clearTokens() async {
     _accessToken = null;
-    _refreshToken = null;
+
     await _storage.deleteAll();
   }
 
-  /// Check if user has valid token
+  /// Check if user has valid token (basic check)
   bool get hasToken => _accessToken != null;
-
-  /// Refresh the access token
-  Future<bool> _refreshAccessToken() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        // Force refresh ID token from Firebase directly
-        final newToken = await user.getIdToken(true);
-        if (newToken != null) {
-          debugPrint('✅ Token refreshed via Firebase SDK');
-          await saveTokens(newToken, _refreshToken ?? '');
-          return true;
-        }
-      }
-    } catch (e) {
-      debugPrint('Token refresh failed: $e');
-    }
-    return false;
-  }
 
   /// Make a GET request
   Future<ApiResponse<T>> get<T>(
@@ -113,21 +116,30 @@ class ApiService {
         uri = uri.replace(queryParameters: queryParams);
       }
 
+      // Proactively get valid token
+      final token = await _getValidToken();
+      final headers = _getHeaders(token);
+
       var response = await http
-          .get(uri, headers: _headers)
+          .get(uri, headers: headers)
           .timeout(ApiConfig.timeout);
 
-      // Handle 401 - try refresh token
-      if (response.statusCode == 401 && _refreshToken != null) {
-        final refreshed = await _refreshAccessToken();
-        if (refreshed) {
-          response = await http
-              .get(uri, headers: _headers)
-              .timeout(ApiConfig.timeout);
-        } else {
-          // If refresh fails with 401, clear tokens to force re-login
-          debugPrint('Persistent 401 detected in GET. Clearing stale tokens.');
-          await clearTokens();
+      // Handle 401 - if proactive fetch failed or token was revoked
+      if (response.statusCode == 401) {
+        debugPrint('401 in GET despite proactive fetch. Forcing refresh...');
+        // Force refresh
+        try {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            final newToken = await user.getIdToken(true);
+            if (newToken != null) {
+              response = await http
+                  .get(uri, headers: _getHeaders(newToken))
+                  .timeout(ApiConfig.timeout);
+            }
+          }
+        } catch (e) {
+          debugPrint('Force refresh failed: $e');
         }
       }
 
@@ -149,28 +161,35 @@ class ApiService {
     try {
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
+      final token = await _getValidToken();
+      final headers = _getHeaders(token);
+
       var response = await http
           .post(
             uri,
-            headers: _headers,
+            headers: headers,
             body: body != null ? jsonEncode(body) : null,
           )
           .timeout(ApiConfig.timeout);
 
-      // Handle 401 - try refresh token
-      if (response.statusCode == 401 && _refreshToken != null) {
-        final refreshed = await _refreshAccessToken();
-        if (refreshed) {
-          response = await http
-              .post(
-                uri,
-                headers: _headers,
-                body: body != null ? jsonEncode(body) : null,
-              )
-              .timeout(ApiConfig.timeout);
-        } else {
-          debugPrint('Persistent 401 detected in POST. Clearing stale tokens.');
-          await clearTokens();
+      if (response.statusCode == 401) {
+        debugPrint('401 in POST. Forcing refresh...');
+        try {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            final newToken = await user.getIdToken(true);
+            if (newToken != null) {
+              response = await http
+                  .post(
+                    uri,
+                    headers: _getHeaders(newToken),
+                    body: body != null ? jsonEncode(body) : null,
+                  )
+                  .timeout(ApiConfig.timeout);
+            }
+          }
+        } catch (e) {
+          debugPrint('Force refresh failed: $e');
         }
       }
 
@@ -192,28 +211,34 @@ class ApiService {
     try {
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
+      final token = await _getValidToken();
+      final headers = _getHeaders(token);
+
       var response = await http
           .put(
             uri,
-            headers: _headers,
+            headers: headers,
             body: body != null ? jsonEncode(body) : null,
           )
           .timeout(ApiConfig.timeout);
 
-      // Handle 401 - try refresh token
-      if (response.statusCode == 401 && _refreshToken != null) {
-        final refreshed = await _refreshAccessToken();
-        if (refreshed) {
-          response = await http
-              .put(
-                uri,
-                headers: _headers,
-                body: body != null ? jsonEncode(body) : null,
-              )
-              .timeout(ApiConfig.timeout);
-        } else {
-          debugPrint('Persistent 401 detected in PUT. Clearing stale tokens.');
-          await clearTokens();
+      if (response.statusCode == 401) {
+        try {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            final newToken = await user.getIdToken(true);
+            if (newToken != null) {
+              response = await http
+                  .put(
+                    uri,
+                    headers: _getHeaders(newToken),
+                    body: body != null ? jsonEncode(body) : null,
+                  )
+                  .timeout(ApiConfig.timeout);
+            }
+          }
+        } catch (e) {
+          /* ignore */
         }
       }
 
@@ -235,30 +260,34 @@ class ApiService {
     try {
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
+      final token = await _getValidToken();
+      final headers = _getHeaders(token);
+
       var response = await http
           .patch(
             uri,
-            headers: _headers,
+            headers: headers,
             body: body != null ? jsonEncode(body) : null,
           )
           .timeout(ApiConfig.timeout);
 
-      // Handle 401 - try refresh token
-      if (response.statusCode == 401 && _refreshToken != null) {
-        final refreshed = await _refreshAccessToken();
-        if (refreshed) {
-          response = await http
-              .patch(
-                uri,
-                headers: _headers,
-                body: body != null ? jsonEncode(body) : null,
-              )
-              .timeout(ApiConfig.timeout);
-        } else {
-          debugPrint(
-            'Persistent 401 detected in PATCH. Clearing stale tokens.',
-          );
-          await clearTokens();
+      if (response.statusCode == 401) {
+        try {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            final newToken = await user.getIdToken(true);
+            if (newToken != null) {
+              response = await http
+                  .patch(
+                    uri,
+                    headers: _getHeaders(newToken),
+                    body: body != null ? jsonEncode(body) : null,
+                  )
+                  .timeout(ApiConfig.timeout);
+            }
+          }
+        } catch (e) {
+          /* ignore */
         }
       }
 
@@ -277,22 +306,26 @@ class ApiService {
     try {
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
+      final token = await _getValidToken();
+      final headers = _getHeaders(token);
+
       var response = await http
-          .delete(uri, headers: _headers)
+          .delete(uri, headers: headers)
           .timeout(ApiConfig.timeout);
 
-      // Handle 401 - try refresh token
-      if (response.statusCode == 401 && _refreshToken != null) {
-        final refreshed = await _refreshAccessToken();
-        if (refreshed) {
-          response = await http
-              .delete(uri, headers: _headers)
-              .timeout(ApiConfig.timeout);
-        } else {
-          debugPrint(
-            'Persistent 401 detected in DELETE. Clearing stale tokens.',
-          );
-          await clearTokens();
+      if (response.statusCode == 401) {
+        try {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            final newToken = await user.getIdToken(true);
+            if (newToken != null) {
+              response = await http
+                  .delete(uri, headers: _getHeaders(newToken))
+                  .timeout(ApiConfig.timeout);
+            }
+          }
+        } catch (e) {
+          /* ignore */
         }
       }
 

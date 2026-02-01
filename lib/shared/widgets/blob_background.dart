@@ -60,7 +60,7 @@ class _BlobBackgroundState extends State<BlobBackground>
             right: -100,
             child: AnimatedBuilder(
               animation: _controller,
-              builder: (_, __) => Transform.rotate(
+              builder: (context, _) => Transform.rotate(
                 angle: _controller.value * 2 * math.pi,
                 child: CustomPaint(
                   size: const Size(400, 400),
@@ -76,7 +76,7 @@ class _BlobBackgroundState extends State<BlobBackground>
             left: -100,
             child: AnimatedBuilder(
               animation: _controller,
-              builder: (_, __) => Transform.rotate(
+              builder: (context, _) => Transform.rotate(
                 angle: -_controller.value * 2 * math.pi, // Reverse rotation
                 child: CustomPaint(
                   size: const Size(350, 350),

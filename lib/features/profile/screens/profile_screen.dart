@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../shared/utils/avatar_utils.dart';
-import '../../../shared/widgets/donor_avatar_ring.dart';
-
 import '../../../core/constants/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../shared/utils/avatar_utils.dart';
+import '../../../shared/widgets/donor_avatar_ring.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -16,267 +16,503 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Profile Header Card
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: context.cardBg,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Avatar
-                  DonorAvatarRing(
-                    isDonor: user?.isAvailableToDonate ?? false,
-                    child: CircleAvatar(
-                      radius: 48,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                      backgroundImage: AvatarUtils.getImageProvider(
-                        user?.avatarUrl,
-                      ),
-                      child: !AvatarUtils.hasAvatar(user?.avatarUrl)
-                          ? Text(
-                              user?.initials ?? 'U',
-                              style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            )
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Name
-                  Text(
-                    user?.fullName ?? 'User',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Email
-                  Text(
-                    user?.email ?? '',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 20),
-                  // Stats Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _StatBadge(
-                        label: 'Blood Type',
-                        value: user?.bloodGroup ?? 'O+',
-                        color: AppColors.primary,
-                      ),
-                      Container(width: 1, height: 40, color: AppColors.border),
-                      _StatBadge(
-                        label: 'Donations',
-                        value: '${user?.totalDonations ?? 0}',
-                        color: AppColors.success,
-                      ),
-                      Container(width: 1, height: 40, color: AppColors.border),
-                      _StatBadge(
-                        label: 'Points',
-                        value: '${user?.points ?? 0}',
-                        color: AppColors.accent,
-                      ),
+      backgroundColor: context.scaffoldBg,
+      body: CustomScrollView(
+        slivers: [
+          _buildPremiumAppBar(context, user, isDark),
+          _buildQuickStats(context, user, isDark),
+          _buildMenuSection(context, isDark, authProvider),
+          const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumAppBar(BuildContext context, dynamic user, bool isDark) {
+    return SliverAppBar(
+      expandedHeight: 280, // Taller to fit avatar + info
+      floating: false,
+      pinned: true,
+      backgroundColor: isDark ? const Color(0xFF1E1E2E) : AppColors.primary,
+      surfaceTintColor: Colors.transparent,
+      flexibleSpace: FlexibleSpaceBar(
+        collapseMode: CollapseMode.parallax,
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? [
+                      const Color(0xFF1A1A2E),
+                      const Color(0xFF2E2E4A),
+                      const Color(0xFF16213E),
+                    ]
+                  : [
+                      const Color(0xFFD32F2F),
+                      const Color(0xFFC62828),
+                      const Color(0xFFB71C1C),
                     ],
-                  ),
-                ],
-              ),
             ),
-
-            const SizedBox(height: 24),
-
-            // Menu Items
-            _MenuItem(
-              icon: Icons.person_outline,
-              title: 'Edit Profile',
-              onTap: () => context.push('/edit-profile'),
-            ),
-            _MenuItem(
-              icon: Icons.settings_outlined,
-              title: 'Settings',
-              onTap: () => context.push('/settings'),
-            ),
-            _MenuItem(
-              icon: Icons.water_drop_outlined,
-              title: 'My Requests',
-              onTap: () => context.push('/my-requests'),
-            ),
-            _MenuItem(
-              icon: Icons.volunteer_activism_outlined,
-              title: 'My Donations',
-              onTap: () => context.push('/my-donations'),
-            ),
-            _MenuItem(
-              icon: Icons.leaderboard_outlined,
-              title: 'Leaderboard',
-              subtitle: 'View top donors',
-              onTap: () => context.push('/leaderboard'),
-            ),
-            _MenuItem(
-              icon: Icons.notifications_outlined,
-              title: 'Notifications',
-              onTap: () => context.push('/notifications'),
-            ),
-            _MenuItem(
-              icon: Icons.help_outline,
-              title: 'Help & Support',
-              onTap: () {
-                launchUrl(Uri.parse('https://bloodreq.com/help'));
-              },
-            ),
-
-            const SizedBox(height: 24),
-
-            // Logout Button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  await authProvider.signOut();
-                  if (context.mounted) {
-                    context.go('/login');
-                  }
-                },
-                icon: const Icon(Icons.logout, color: AppColors.error),
-                label: const Text(
-                  'Sign Out',
-                  style: TextStyle(color: AppColors.error),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.error),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 40),
-
-            // TynyBite Labs Watermark
-            Column(
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'Developed by',
-                  style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'TynyBite Labs',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textSecondary,
-                    letterSpacing: 1.2,
+                const SizedBox(height: 16),
+                // Avatar
+                DonorAvatarRing(
+                  isDonor: user?.isAvailableToDonate ?? false,
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    backgroundImage: AvatarUtils.getImageProvider(
+                      user?.avatarUrl,
+                    ),
+                    child: !AvatarUtils.hasAvatar(user?.avatarUrl)
+                        ? Text(
+                            user?.initials ?? '?',
+                            style: TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          )
+                        : null,
                   ),
-                ),
+                ).animate().scale(curve: Curves.elasticOut),
+                const SizedBox(height: 16),
+                // Name
+                Text(
+                  user?.fullName ?? 'Guest User',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
+                ).animate(delay: 100.ms).fadeIn().slideY(begin: 0.1, end: 0),
+                const SizedBox(height: 4),
+                // Email
+                Text(
+                  user?.email ?? '',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ).animate(delay: 200.ms).fadeIn(),
+                if (user?.isAvailableToDonate ?? false) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Active Donor',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ).animate(delay: 300.ms).fadeIn().scale(),
+                ],
               ],
             ),
-
-            const SizedBox(height: 100), // Bottom padding for navbar
-          ],
+          ),
         ),
       ),
     );
   }
-}
 
-class _StatBadge extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _StatBadge({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: color,
-          ),
+  Widget _buildQuickStats(BuildContext context, dynamic user, bool isDark) {
+    return SliverToBoxAdapter(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                icon: Icons.bloodtype_rounded,
+                label: 'Blood Type',
+                value: user?.bloodGroup ?? 'O+',
+                color: AppColors.primary,
+                isDark: isDark,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.volunteer_activism_rounded,
+                label: 'Donations',
+                value: '${user?.totalDonations ?? 0}',
+                color: AppColors.success,
+                isDark: isDark,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.star_rounded,
+                label: 'Points',
+                value: '${user?.points ?? 0}',
+                color: const Color(0xFFFFB300),
+                isDark: isDark,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-        ),
-      ],
+      ).animate(delay: 400.ms).fadeIn().slideY(begin: 0.1, end: 0),
     );
+  }
+
+  Widget _buildMenuSection(
+    BuildContext context,
+    bool isDark,
+    AuthProvider authProvider,
+  ) {
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverList(
+        delegate: SliverChildListDelegate([
+          _SectionHeader(title: 'Account', isDark: isDark),
+          _PremiumMenuItem(
+            icon: Icons.person_outline_rounded,
+            title: 'Edit Profile',
+            subtitle: 'Personal details & photo',
+            onTap: () => context.push('/edit-profile'),
+            isDark: isDark,
+            delay: 450,
+          ),
+          const SizedBox(height: 12),
+          _PremiumMenuItem(
+            icon: Icons.settings_outlined,
+            title: 'Settings',
+            subtitle: 'App preferences',
+            onTap: () => context.push('/settings'),
+            isDark: isDark,
+            delay: 500,
+          ),
+          const SizedBox(height: 24),
+          _SectionHeader(title: 'Activity', isDark: isDark),
+          _PremiumMenuItem(
+            icon: Icons.water_drop_outlined,
+            title: 'My Requests',
+            subtitle: 'Track status & history',
+            onTap: () => context.push('/my-requests'),
+            isDark: isDark,
+            delay: 550,
+          ),
+          const SizedBox(height: 12),
+          _PremiumMenuItem(
+            icon: Icons.volunteer_activism_outlined,
+            title: 'My Donations',
+            subtitle: 'View your impact',
+            onTap: () => context.push('/my-donations'),
+            isDark: isDark,
+            delay: 600,
+          ),
+          const SizedBox(height: 12),
+          _PremiumMenuItem(
+            icon: Icons.leaderboard_outlined,
+            title: 'Leaderboard',
+            subtitle: 'Top donors near you',
+            onTap: () => context.push('/leaderboard'),
+            isDark: isDark,
+            delay: 650,
+          ),
+          const SizedBox(height: 12),
+          _PremiumMenuItem(
+            icon: Icons.notifications_outlined,
+            title: 'Notifications',
+            subtitle: 'Alerts & updates',
+            onTap: () => context.push('/notifications'),
+            isDark: isDark,
+            delay: 700,
+          ),
+          const SizedBox(height: 24),
+          _SectionHeader(title: 'Support', isDark: isDark),
+          _PremiumMenuItem(
+            icon: Icons.help_outline_rounded,
+            title: 'Help Center',
+            onTap: () => launchUrl(Uri.parse('https://bloodreq.com/help')),
+            isDark: isDark,
+            delay: 750,
+          ),
+          const SizedBox(height: 24),
+          _LogoutButton(
+            onTap: () async {
+              await authProvider.signOut();
+              if (context.mounted) {
+                context.go('/login');
+              }
+            },
+          ),
+          const SizedBox(height: 32),
+          _buildFooter(isDark),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildFooter(bool isDark) {
+    return Center(
+      child: Column(
+        children: [
+          Text(
+            'BloodReq v1.0.0',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textTertiary,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    ).animate(delay: 800.ms).fadeIn();
   }
 }
 
-class _MenuItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final VoidCallback onTap;
+// ─────────────────────────────────────────────────────────────
+// WIDGETS
+// ─────────────────────────────────────────────────────────────
 
-  const _MenuItem({
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  final bool isDark;
+
+  const _StatCard({
     required this.icon,
-    required this.title,
-    this.subtitle,
-    required this.onTap,
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
       decoration: BoxDecoration(
-        color: context.cardBg,
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: color.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceVariant,
-            borderRadius: BorderRadius.circular(10),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: context.textPrimary,
+            ),
           ),
-          child: Icon(icon, color: AppColors.textSecondary, size: 20),
-        ),
-        title: Text(title),
-        subtitle: subtitle != null ? Text(subtitle!) : null,
-        trailing: const Icon(
-          Icons.chevron_right,
-          color: AppColors.textTertiary,
-        ),
-        onTap: onTap,
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final bool isDark;
+
+  const _SectionHeader({required this.title, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, bottom: 12),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    ).animate().fadeIn().slideX(begin: -0.05, end: 0);
+  }
+}
+
+class _PremiumMenuItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final bool isDark;
+  final int delay;
+
+  const _PremiumMenuItem({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.onTap,
+    required this.isDark,
+    this.delay = 0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.grey.withValues(alpha: 0.1),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isDark ? Colors.white70 : AppColors.textSecondary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: context.textPrimary,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textTertiary,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        )
+        .animate(delay: Duration(milliseconds: delay))
+        .fadeIn(duration: 400.ms)
+        .slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
+  }
+}
+
+class _LogoutButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _LogoutButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.error.withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Sign Out',
+              style: TextStyle(
+                color: AppColors.error,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).animate(delay: 750.ms).fadeIn().scale();
   }
 }

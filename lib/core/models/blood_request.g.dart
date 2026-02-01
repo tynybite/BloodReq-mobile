@@ -23,7 +23,7 @@ class BloodRequestAdapter extends TypeAdapter<BloodRequest> {
       bloodGroup: fields[3] as String,
       units: fields[4] as int,
       hospital: fields[5] as String,
-      requiredDate: fields[6] as DateTime,
+      requiredDate: (fields[6] as DateTime?) ?? DateTime.now(),
       contactNumber: fields[7] as String,
       urgency: fields[8] as String,
       status: fields[9] as String,
@@ -31,14 +31,19 @@ class BloodRequestAdapter extends TypeAdapter<BloodRequest> {
       userId: fields[11] as String,
       latitude: fields[12] as double,
       longitude: fields[13] as double,
-      createdAt: fields[14] as DateTime,
+      createdAt: (fields[15] as DateTime?) ?? DateTime.now(),
+      patientAge: fields[16] as int?,
+      alternateContact: fields[17] as String?,
+      notes: fields[18] as String?,
+      updatedAt: fields[19] as DateTime?,
+      locationData: (fields[20] as Map?)?.cast<String, dynamic>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, BloodRequest obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -67,8 +72,18 @@ class BloodRequestAdapter extends TypeAdapter<BloodRequest> {
       ..write(obj.latitude)
       ..writeByte(13)
       ..write(obj.longitude)
-      ..writeByte(14)
-      ..write(obj.createdAt);
+      ..writeByte(15)
+      ..write(obj.createdAt)
+      ..writeByte(16)
+      ..write(obj.patientAge)
+      ..writeByte(17)
+      ..write(obj.alternateContact)
+      ..writeByte(18)
+      ..write(obj.notes)
+      ..writeByte(19)
+      ..write(obj.updatedAt)
+      ..writeByte(20)
+      ..write(obj.locationData);
   }
 
   @override

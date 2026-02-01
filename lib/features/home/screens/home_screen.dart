@@ -14,6 +14,7 @@ import '../../../core/services/sync_service.dart';
 import '../../../core/models/blood_request.dart';
 import '../../../shared/widgets/request_card.dart';
 import '../../../shared/widgets/fundraiser_card.dart';
+import '../widgets/hero_carousel.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -284,37 +285,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // Hero Section
+              // Sponsored Campaigns Carousel
               SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: AppGradients.heroGradient,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Save Lives Today',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Find nearby blood requests or donate to help patients in need.',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1, end: 0),
+                child:
+                    Padding(
+                          padding: const EdgeInsets.only(top: 16, bottom: 8),
+                          child: HeroCarousel(city: user?.city, limit: 5),
+                        )
+                        .animate()
+                        .fadeIn(duration: 500.ms)
+                        .slideY(begin: 0.05, end: 0),
               ),
 
               // Quick Stats

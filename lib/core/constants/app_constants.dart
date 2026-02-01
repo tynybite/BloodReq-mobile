@@ -8,7 +8,7 @@ class ApiConfig {
   // static const String baseUrl = 'https://bloodreq.vercel.app/api';
 
   // Development (Localhost)
-  static const String baseUrl = 'http://192.168.1.3:3000/api';
+  static const String baseUrl = 'http://192.168.1.5:3000/api';
   // static const String baseUrl = 'https://bloodreq.vercel.app/api'; // Use this for production/vercel
 
   // Request timeout
@@ -83,6 +83,13 @@ class ApiEndpoints {
   // Payment Endpoints
   static const String initiatePayment = '/payments/initiate';
   static const String verifyPayment = '/payments/verify';
+
+  // Campaigns Endpoints
+  static const String campaigns = '/campaigns';
+  static String campaignTrack(String id) => '/campaigns/$id/track';
+
+  // Ads Config Endpoint
+  static const String adsConfig = '/ads/config';
 }
 
 /// App Constants

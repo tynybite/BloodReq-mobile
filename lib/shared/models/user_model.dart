@@ -7,6 +7,7 @@ class UserModel {
   final String? avatarUrl;
   final String country;
   final String city;
+  final String? address;
   final String? area;
   final double? latitude;
   final double? longitude;
@@ -39,6 +40,7 @@ class UserModel {
     required this.createdAt,
     this.lastDonationAt,
     this.emergencyContact,
+    this.address,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -66,6 +68,7 @@ class UserModel {
           ? DateTime.parse(json['last_donation_at'] as String)
           : null,
       emergencyContact: json['emergency_contact'] as String?,
+      address: json['address'] as String?,
     );
   }
 
@@ -90,6 +93,7 @@ class UserModel {
       'created_at': createdAt.toIso8601String(),
       'last_donation_at': lastDonationAt?.toIso8601String(),
       'emergency_contact': emergencyContact,
+      'address': address,
     };
   }
 
@@ -113,6 +117,7 @@ class UserModel {
     DateTime? createdAt,
     DateTime? lastDonationAt,
     String? emergencyContact,
+    String? address,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -134,6 +139,7 @@ class UserModel {
       createdAt: createdAt ?? this.createdAt,
       lastDonationAt: lastDonationAt ?? this.lastDonationAt,
       emergencyContact: emergencyContact ?? this.emergencyContact,
+      address: address ?? this.address,
     );
   }
 

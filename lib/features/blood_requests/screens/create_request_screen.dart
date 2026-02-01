@@ -153,6 +153,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
     setState(() => _loadingCities = true);
 
     final response = await _api.get<Map<String, dynamic>>(ApiEndpoints.cities);
+    if (!mounted) return;
 
     if (response.success && response.data != null) {
       setState(() {
@@ -269,6 +270,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
         'required_date': _selectedDate.toIso8601String(),
       },
     );
+
+    if (!mounted) return;
 
     setState(() => _isLoading = false);
 

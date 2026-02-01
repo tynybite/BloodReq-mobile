@@ -46,8 +46,23 @@ class BloodRequest extends HiveObject {
   @HiveField(13)
   final double longitude;
 
-  @HiveField(14)
+  @HiveField(15)
   final DateTime createdAt;
+
+  @HiveField(16)
+  final int? patientAge;
+
+  @HiveField(17)
+  final String? alternateContact;
+
+  @HiveField(18)
+  final String? notes;
+
+  @HiveField(19)
+  final DateTime? updatedAt;
+
+  @HiveField(20)
+  final Map<String, dynamic>? locationData; // Store full location object
 
   BloodRequest({
     required this.id,
@@ -65,6 +80,11 @@ class BloodRequest extends HiveObject {
     required this.latitude,
     required this.longitude,
     required this.createdAt,
+    this.patientAge,
+    this.alternateContact,
+    this.notes,
+    this.updatedAt,
+    this.locationData,
   });
 
   factory BloodRequest.fromJson(Map<String, dynamic> json) {
@@ -84,13 +104,32 @@ class BloodRequest extends HiveObject {
       location:
           json['address'] ?? json['city'] ?? json['location']?['address'] ?? '',
       userId: json['user_id'] ?? json['requester']?['id'] ?? '',
-      latitude: (json['latitude'] ?? json['location']?['latitude'] ?? 0.0)
-          .toDouble(),
-      longitude: (json['longitude'] ?? json['location']?['longitude'] ?? 0.0)
-          .toDouble(),
+      latitude:
+          (json['latitude'] ??
+                  (json['location'] is Map
+                      ? json['location']['latitude']
+                      : null) ??
+                  0.0)
+              .toDouble(),
+      longitude:
+          (json['longitude'] ??
+                  (json['location'] is Map
+                      ? json['location']['longitude']
+                      : null) ??
+                  0.0)
+              .toDouble(),
       createdAt: DateTime.parse(
         json['created_at'] ?? DateTime.now().toIso8601String(),
       ),
+      patientAge: json['patient_age'],
+      alternateContact: json['alternate_contact'],
+      notes: json['notes'] ?? json['admin_notes'], // Handle admin_notes too
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null,
+      locationData: json['location'] is Map<String, dynamic>
+          ? json['location']
+          : null,
     );
   }
 
@@ -110,9 +149,18 @@ class BloodRequest extends HiveObject {
         'address': location,
         'latitude': latitude,
         'longitude': longitude,
+        ...?locationData, // helper to merge if exists
       },
+      'city': location, // Redundancy for admin panel compatibility
+      'address': location, // Redundancy for admin panel compatibility
+      'latitude': latitude,
+      'longitude': longitude,
       'user_id': userId,
       'created_at': createdAt.toIso8601String(),
+      'patient_age': patientAge,
+      'alternate_contact': alternateContact,
+      'notes': notes,
+      'updated_at': updatedAt?.toIso8601String(),
     };
   }
 }

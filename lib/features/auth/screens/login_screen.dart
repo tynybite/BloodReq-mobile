@@ -290,8 +290,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                       .signInWithGoogle();
                                   if (mounted) {
                                     setState(() => _isGoogleLoading = false);
+                                    if (success) context.go('/home');
                                   }
-                                  if (mounted && success) context.go('/home');
                                 },
                           icon: _isGoogleLoading
                               ? const SizedBox(
