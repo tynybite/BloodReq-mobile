@@ -808,7 +808,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
 
   Widget _buildCityDropdown(bool isDark) {
     return DropdownButtonFormField<String>(
-      value: _cities.any((c) => c['name'] == _selectedCity)
+      initialValue: _cities.any((c) => c['name'] == _selectedCity)
           ? _selectedCity
           : null,
       decoration: InputDecoration(

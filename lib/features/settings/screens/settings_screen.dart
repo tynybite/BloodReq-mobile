@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
@@ -278,7 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               trailing: Switch(
                 value: themeProvider.isDarkMode,
                 onChanged: (_) => themeProvider.toggleTheme(),
-                activeColor: AppColors.primary,
+                activeThumbColor: AppColors.primary,
               ),
               isDark: isDark,
               delay: 300,
@@ -302,7 +300,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           trailing: Switch(
             value: _notificationsEnabled,
             onChanged: _toggleNotifications,
-            activeColor: AppColors.primary,
+            activeThumbColor: AppColors.primary,
           ),
           isDark: isDark,
           delay: 500,

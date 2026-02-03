@@ -121,7 +121,9 @@ class BloodRequest extends HiveObject {
       createdAt: DateTime.parse(
         json['created_at'] ?? DateTime.now().toIso8601String(),
       ),
-      patientAge: json['patient_age'],
+      patientAge: json['patient_age'] != null
+          ? int.tryParse(json['patient_age'].toString())
+          : null,
       alternateContact: json['alternate_contact'],
       notes: json['notes'] ?? json['admin_notes'], // Handle admin_notes too
       updatedAt: json['updated_at'] != null

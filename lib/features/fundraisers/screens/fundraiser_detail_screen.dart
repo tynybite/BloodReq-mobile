@@ -66,14 +66,14 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setSheetState) {
+      builder: (modalContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
           return Padding(
             padding: EdgeInsets.fromLTRB(
               24,
               24,
               24,
-              MediaQuery.of(context).viewInsets.bottom + 24,
+              MediaQuery.of(sheetContext).viewInsets.bottom + 24,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -82,7 +82,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                 Text(
                   'Donate to this fundraiser',
                   style: Theme.of(
-                    context,
+                    sheetContext,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
@@ -149,16 +149,20 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
 
                             if (response.success) {
                               Navigator.pop(context);
-                              AppToast.success(
-                                context,
-                                'Thank you for your donation!',
-                              );
+                              if (mounted) {
+                                AppToast.success(
+                                  context,
+                                  'Thank you for your donation!',
+                                );
+                              }
                               _loadFundraiser(); // Refresh
                             } else {
-                              AppToast.error(
-                                context,
-                                response.message ?? 'Donation failed',
-                              );
+                              if (mounted) {
+                                AppToast.error(
+                                  context,
+                                  response.message ?? 'Donation failed',
+                                );
+                              }
                             }
                           },
                     child: _donating

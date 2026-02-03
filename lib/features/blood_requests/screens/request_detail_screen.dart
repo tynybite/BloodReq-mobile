@@ -54,8 +54,9 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   Future<void> _calculateDistance() async {
     if (_request == null ||
         _request!['latitude'] == null ||
-        _request!['longitude'] == null)
+        _request!['longitude'] == null) {
       return;
+    }
 
     try {
       // Check permissions first (usually handled in splash/home, but safe to check)

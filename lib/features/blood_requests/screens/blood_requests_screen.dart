@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/providers/scroll_control_provider.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/api_service.dart';
@@ -137,8 +138,8 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
     }).toList();
 
     // 2. Split into "Matches" (User's Blood Group) vs Others
-    // TODO: Get user's actual blood group from profile
-    const userBloodGroup = 'O+'; // Mock for now
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userBloodGroup = authProvider.user?.bloodGroup;
 
     _matchingRequests = filtered
         .where((r) => r.bloodGroup == userBloodGroup)

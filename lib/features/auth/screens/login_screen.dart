@@ -58,13 +58,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final lang = context.watch<LanguageProvider>();
+  Widget build(BuildContext viewContext) {
+    final lang = viewContext.watch<LanguageProvider>();
 
-    final size = MediaQuery.of(context).size;
+    final size = MediaQuery.of(viewContext).size;
 
     return Scaffold(
-      backgroundColor: context.scaffoldBg,
+      backgroundColor: viewContext.scaffoldBg,
       body: Stack(
         children: [
           // 1. Organic Blob Background
@@ -123,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: context.isDark
+                          color: viewContext.isDark
                               ? Colors.black.withValues(alpha: 0.3)
                               : AppColors.primary.withValues(alpha: 0.08),
                           blurRadius: 24,
@@ -141,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: context.textPrimary,
+                              color: viewContext.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -157,13 +157,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: context.borderColor,
+                                  color: viewContext.borderColor,
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: context.borderColor,
+                                  color: viewContext.borderColor,
                                 ),
                               ),
                             ),
@@ -198,13 +198,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: context.borderColor,
+                                  color: viewContext.borderColor,
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: context.borderColor,
+                                  color: viewContext.borderColor,
                                 ),
                               ),
                             ),
@@ -217,7 +217,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: () => context.push('/forgot-password'),
+                              onPressed: () =>
+                                  viewContext.push('/forgot-password'),
                               child: Text(lang.getText('forgot_password')),
                             ),
                           ),
@@ -273,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text(
                         lang.getText('or'),
-                        style: TextStyle(color: context.textTertiary),
+                        style: TextStyle(color: viewContext.textTertiary),
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
@@ -284,13 +285,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? null
                               : () async {
                                   setState(() => _isGoogleLoading = true);
-                                  final authProvider = context
+                                  final authProvider = viewContext
                                       .read<AuthProvider>();
                                   final success = await authProvider
                                       .signInWithGoogle();
                                   if (mounted) {
                                     setState(() => _isGoogleLoading = false);
-                                    if (success) context.go('/home');
+                                    if (success && mounted) {
+                                      context.go('/home');
+                                    }
                                   }
                                 },
                           icon: _isGoogleLoading
@@ -311,7 +314,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: context.borderColor),
+                            side: BorderSide(color: viewContext.borderColor),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -329,10 +332,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text(
                         lang.getText('no_account'),
-                        style: TextStyle(color: context.textSecondary),
+                        style: TextStyle(color: viewContext.textSecondary),
                       ),
                       TextButton(
-                        onPressed: () => context.push('/register'),
+                        onPressed: () => viewContext.push('/register'),
                         child: Text(
                           lang.getText('sign_up'),
                           style: const TextStyle(
@@ -351,7 +354,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
           // 3. Language Switcher (Moved to Top for Z-Index)
           Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
+            top: MediaQuery.of(viewContext).padding.top + 10,
             right: 20,
             child: SafeArea(
               child: Container(

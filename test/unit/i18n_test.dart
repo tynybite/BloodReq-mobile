@@ -36,9 +36,6 @@ void main() {
 
         // check if all EN keys exist in other languages
         final missingKeys = enKeys.difference(langKeys);
-        if (missingKeys.isNotEmpty) {
-          print('Warning: Missing keys in $lang: $missingKeys');
-        }
 
         // We can enforce strict equality if we want, but for now just logging warning or checking critical ones
         // enforcing strict equality for now to ensure quality
