@@ -25,6 +25,8 @@ import '../../features/profile/screens/edit_profile_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/verification/screens/verification_screen.dart';
+import '../../features/legal/screens/terms_of_service_screen.dart';
+import '../../features/legal/screens/privacy_policy_screen.dart';
 
 class RouterService {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -147,6 +149,14 @@ class RouterService {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/terms-of-service',
+        builder: (context, state) => const TermsOfServiceScreen(),
+      ),
+      GoRoute(
+        path: '/privacy-policy',
+        builder: (context, state) => const PrivacyPolicyScreen(),
       ),
       GoRoute(
         path: '/edit-profile',

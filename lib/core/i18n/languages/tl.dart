@@ -241,4 +241,70 @@ const Map<String, String> tl = {
   'time_m_ago': 'm ang nakalipas',
   'time_h_ago': 'h ang nakalipas',
   'time_d_ago': 'd ang nakalipas',
+
+  // Terms of Service
+  'tos_last_updated': 'Huling na-update: Pebrero 10, 2026',
+  'tos_acceptance_title': '1. Pagtanggap ng mga Tuntunin',
+  'tos_acceptance_body':
+      'Sa pamamagitan ng pag-download, pag-install, o paggamit ng BloodReq application, sumasang-ayon ka sa mga Tuntunin ng Serbisyong ito. Kung hindi ka sumasang-ayon sa mga tuntuning ito, mangyaring huwag gamitin ang application.',
+  'tos_eligibility_title': '2. Pagiging Karapat-dapat',
+  'tos_eligibility_body':
+      'Dapat ay hindi bababa sa 18 taong gulang ka upang magamit ang application na ito. Sa paggamit ng BloodReq, kinakatawan mo na ikaw ay hindi bababa sa 18 taong gulang at may legal na kakayahan na pumasok sa mga tuntuning ito.',
+  'tos_account_title': '3. Account ng User',
+  'tos_account_body':
+      'Ikaw ang responsable sa pagpapanatili ng kumpidensyalidad ng iyong mga kredensyal ng account. Sumasang-ayon ka na magbigay ng tumpak at kumpletong impormasyon sa pagpaparehistro at panatilihing updated ang iyong impormasyon sa profile. Ikaw ang responsable sa lahat ng aktibidad na nangyayari sa iyong account.',
+  'tos_services_title': '4. Mga Serbisyo',
+  'tos_services_body':
+      'Ang BloodReq ay isang platform na nag-uugnay ng mga blood donor sa mga pasyenteng nangangailangan. Hindi namin ginagarantiya ang availability ng mga blood donor o ang tagumpay ng anumang blood donation. Ang BloodReq ay hindi isang medical service provider at hindi nagbibigay ng medical advice. Laging kumonsulta sa isang kwalipikadong healthcare professional para sa mga desisyong medikal.',
+  'tos_user_conduct_title': '5. Pag-uugali ng User',
+  'tos_user_conduct_body':
+      'Sumasang-ayon ka na hindi:\n• Mag-post ng maling o nakakapanlinlang na impormasyon\n• Gamitin ang app para sa anumang ilegal na layunin\n• Mang-harass, mang-abuso, o makapinsala sa ibang mga user\n• Subukang makakuha ng hindi awtorisadong access sa ibang mga account\n• Makagambala sa tamang paggana ng application\n• Gamitin ang platform para sa mga komersyal na layunin nang walang awtorisasyon',
+  'tos_disclaimer_title': '6. Medikal na Disclaimer',
+  'tos_disclaimer_body':
+      'Ang BloodReq ay hindi nagbibigay ng medikal na payo, diagnosis, o paggamot. Ang app ay nagsisilbi lamang bilang isang platform ng komunikasyon. Ang lahat ng desisyong medikal, kasama ang pagiging karapat-dapat sa blood donation, ay dapat gawin sa konsultasyon sa mga kwalipikadong healthcare professional.',
+  'tos_liability_title': '7. Limitasyon ng Pananagutan',
+  'tos_liability_body':
+      'Ang BloodReq at ang mga developer nito ay hindi mananagot para sa anumang direkta, hindi direkta, aksidental, espesyal, o consequential na pinsala na nagmumula sa iyong paggamit ng application. Ang serbisyo ay ibinibigay "as is" nang walang anumang uri ng garantiya.',
+  'tos_termination_title': '8. Pagwawakas',
+  'tos_termination_body':
+      'Inilalaan namin ang karapatang suspindihin o wakasan ang iyong account anumang oras, na may o walang abiso, para sa mga paglabag sa mga tuntuning ito o para sa anumang ibang dahilan. Maaari mo ring i-delete ang iyong account anumang oras sa pamamagitan ng app settings.',
+  'tos_changes_title': '9. Mga Pagbabago sa mga Tuntunin',
+  'tos_changes_body':
+      'Maaari naming i-update ang mga Tuntunin ng Serbisyong ito paminsan-minsan. Aabisuhan ka namin tungkol sa mahahalagang pagbabago sa pamamagitan ng app. Ang iyong patuloy na paggamit ng BloodReq pagkatapos ng mga pagbabago ay nangangahulugang tinatanggap mo ang na-update na mga tuntunin.',
+  'tos_contact_title': '10. Makipag-ugnayan sa Amin',
+  'tos_contact_body':
+      'Kung mayroon kang anumang mga katanungan tungkol sa mga Tuntunin ng Serbisyong ito, mangyaring makipag-ugnayan sa amin sa:\n\nEmail: support@bloodreq.com\nWebsite: https://bloodreq.com',
+
+  // Privacy Policy
+  'pp_last_updated': 'Huling na-update: Pebrero 10, 2026',
+  'pp_intro_title': '1. Panimula',
+  'pp_intro_body':
+      'Ang BloodReq ("kami", "amin", o "namin") ay nakatuon sa pagprotekta ng iyong privacy. Ang Patakaran sa Privacy na ito ay nagpapaliwanag kung paano namin kinokolekta, ginagamit, ibinubunyag, at pinoprotektahan ang iyong impormasyon kapag ginagamit mo ang aming mobile application.',
+  'pp_info_collect_title': '2. Impormasyong Kinokolekta Namin',
+  'pp_info_collect_body':
+      'Kinokolekta namin ang mga sumusunod na uri ng impormasyon:\n\n• Personal na Impormasyon: Pangalan, email address, numero ng telepono, blood group, at lokasyon (lungsod/bansa).\n• Impormasyon sa Profile: Profile photo, kasaysayan ng donasyon, at status ng availability.\n• Data ng Lokasyon: Ang iyong tinatayang lokasyon upang i-match ka sa mga kalapit na blood request.\n• Impormasyon ng Device: Uri ng device, operating system, at mga push notification token.\n• Data ng Paggamit: Mga pattern ng paggamit ng app at data ng interaksyon upang mapabuti ang aming mga serbisyo.',
+  'pp_info_use_title': '3. Paano Namin Ginagamit ang Iyong Impormasyon',
+  'pp_info_use_body':
+      'Ginagamit namin ang iyong impormasyon upang:\n\n• Ikonekta ang mga blood donor sa mga pasyenteng nangangailangan\n• Magpadala ng mga notification tungkol sa mga kalapit na blood request\n• Ipakita ang iyong profile sa mga potensyal na tatanggap\n• Panatilihin ang mga leaderboard at istatistika ng donasyon\n• Pagbutihin ang aming app at mga serbisyo\n• Ipaalam ang mahahalagang update at anunsyo\n• Tiyakin ang kaligtasan at seguridad ng aming platform',
+  'pp_info_share_title': '4. Pag-share ng Impormasyon',
+  'pp_info_share_body':
+      'Hindi namin ibinebenta ang iyong personal na impormasyon. Maaari naming i-share ang iyong impormasyon sa mga sumusunod na kaso:\n\n• Sa ibang mga user: Ang iyong pangalan, blood group, at pangkalahatang lokasyon ay makikita ng mga user na naghahanap ng mga donor.\n• Sa mga service provider: Gumagamit kami ng third-party na serbisyo (Firebase, analytics) na maaaring magproseso ng iyong data.\n• Mga legal na kinakailangan: Kapag kinakailangan ng batas o upang protektahan ang aming mga karapatan at kaligtasan.',
+  'pp_data_security_title': '5. Seguridad ng Data',
+  'pp_data_security_body':
+      'Nagpapatupad kami ng naaangkop na mga hakbang sa seguridad upang protektahan ang iyong personal na impormasyon, kasama ang encryption sa transit at sa rest. Gayunpaman, walang paraan ng transmission sa Internet ang 100% ligtas, at hindi namin magagarantiya ang ganap na seguridad.',
+  'pp_data_retention_title': '6. Pagpapanatili ng Data',
+  'pp_data_retention_body':
+      'Pinapanatili namin ang iyong personal na data hangga\'t aktibo ang iyong account. Kapag in-delete mo ang iyong account, ide-delete namin ang iyong personal na data sa loob ng 30 araw, maliban kung kinakailangan ng batas ang pagpapanatili.',
+  'pp_your_rights_title': '7. Mga Karapatan Mo',
+  'pp_your_rights_body':
+      'May karapatan ka na:\n\n• Ma-access ang iyong personal na data\n• Itama ang hindi tamang impormasyon\n• I-delete ang iyong account at mga kaugnay na data\n• Mag-opt out sa mga push notification\n• Humiling ng kopya ng iyong data\n• Bawiin ang pahintulot para sa pagpoproseso ng data',
+  'pp_children_title': '8. Privacy ng mga Bata',
+  'pp_children_body':
+      'Ang BloodReq ay hindi para sa mga batang wala pang 18 taong gulang. Hindi kami sinasadyang nangongolekta ng personal na impormasyon mula sa mga bata. Kung malaman namin na may batang nagbigay sa amin ng personal na data, agad namin itong ide-delete.',
+  'pp_changes_title': '9. Mga Pagbabago sa Patakarang Ito',
+  'pp_changes_body':
+      'Maaari naming i-update ang Patakaran sa Privacy na ito paminsan-minsan. Aabisuhan ka namin tungkol sa anumang mahahalagang pagbabago sa pamamagitan ng pag-post ng bagong patakaran sa app. Ang iyong patuloy na paggamit ng BloodReq pagkatapos ng mga pagbabago ay nangangahulugang tinatanggap mo ang na-update na patakaran.',
+  'pp_contact_title': '10. Makipag-ugnayan sa Amin',
+  'pp_contact_body':
+      'Kung mayroon kang anumang mga katanungan tungkol sa Patakaran sa Privacy na ito o sa aming mga gawain sa data, mangyaring makipag-ugnayan sa amin sa:\n\nEmail: support@bloodreq.com\nWebsite: https://bloodreq.com',
 };

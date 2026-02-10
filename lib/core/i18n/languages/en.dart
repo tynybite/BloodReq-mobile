@@ -237,4 +237,70 @@ const Map<String, String> en = {
   'time_m_ago': 'm ago',
   'time_h_ago': 'h ago',
   'time_d_ago': 'd ago',
+
+  // Terms of Service
+  'tos_last_updated': 'Last updated: February 10, 2026',
+  'tos_acceptance_title': '1. Acceptance of Terms',
+  'tos_acceptance_body':
+      'By downloading, installing, or using the BloodReq application, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the application.',
+  'tos_eligibility_title': '2. Eligibility',
+  'tos_eligibility_body':
+      'You must be at least 18 years old to use this application. By using BloodReq, you represent that you are at least 18 years of age and have the legal capacity to enter into these terms.',
+  'tos_account_title': '3. User Account',
+  'tos_account_body':
+      'You are responsible for maintaining the confidentiality of your account credentials. You agree to provide accurate and complete information during registration and to keep your profile information up to date. You are responsible for all activities that occur under your account.',
+  'tos_services_title': '4. Services',
+  'tos_services_body':
+      'BloodReq is a platform that connects blood donors with patients in need. We do not guarantee the availability of blood donors or the success of any blood donation. BloodReq is not a medical service provider and does not provide medical advice. Always consult a qualified healthcare professional for medical decisions.',
+  'tos_user_conduct_title': '5. User Conduct',
+  'tos_user_conduct_body':
+      'You agree not to:\n• Post false or misleading information\n• Use the app for any unlawful purpose\n• Harass, abuse, or harm other users\n• Attempt to gain unauthorized access to other accounts\n• Interfere with the proper functioning of the application\n• Use the platform for commercial purposes without authorization',
+  'tos_disclaimer_title': '6. Medical Disclaimer',
+  'tos_disclaimer_body':
+      'BloodReq does not provide medical advice, diagnosis, or treatment. The app serves as a communication platform only. All medical decisions, including blood donation eligibility, should be made in consultation with qualified healthcare professionals. We are not responsible for any medical outcomes.',
+  'tos_liability_title': '7. Limitation of Liability',
+  'tos_liability_body':
+      'BloodReq and its developers shall not be liable for any direct, indirect, incidental, special, or consequential damages arising from your use of the application. The service is provided "as is" without warranties of any kind.',
+  'tos_termination_title': '8. Termination',
+  'tos_termination_body':
+      'We reserve the right to suspend or terminate your account at any time, with or without notice, for violations of these terms or for any other reason. You may also delete your account at any time through the app settings.',
+  'tos_changes_title': '9. Changes to Terms',
+  'tos_changes_body':
+      'We may update these Terms of Service from time to time. We will notify you of significant changes through the app. Your continued use of BloodReq after changes constitutes acceptance of the updated terms.',
+  'tos_contact_title': '10. Contact Us',
+  'tos_contact_body':
+      'If you have any questions about these Terms of Service, please contact us at:\n\nEmail: support@bloodreq.com\nWebsite: https://bloodreq.com',
+
+  // Privacy Policy
+  'pp_last_updated': 'Last updated: February 10, 2026',
+  'pp_intro_title': '1. Introduction',
+  'pp_intro_body':
+      'BloodReq ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application.',
+  'pp_info_collect_title': '2. Information We Collect',
+  'pp_info_collect_body':
+      'We collect the following types of information:\n\n• Personal Information: Name, email address, phone number, blood group, and location (city/country).\n• Profile Information: Profile photo, donation history, and availability status.\n• Location Data: Your approximate location to match you with nearby blood requests.\n• Device Information: Device type, operating system, and push notification tokens.\n• Usage Data: App usage patterns and interaction data to improve our services.',
+  'pp_info_use_title': '3. How We Use Your Information',
+  'pp_info_use_body':
+      'We use your information to:\n\n• Connect blood donors with patients in need\n• Send notifications about nearby blood requests\n• Display your profile to potential recipients\n• Maintain leaderboards and donation statistics\n• Improve our app and services\n• Communicate important updates and announcements\n• Ensure the safety and security of our platform',
+  'pp_info_share_title': '4. Information Sharing',
+  'pp_info_share_body':
+      'We do not sell your personal information. We may share your information in the following cases:\n\n• With other users: Your name, blood group, and general location are visible to users seeking donors.\n• With service providers: We use third-party services (Firebase, analytics) that may process your data.\n• Legal requirements: When required by law or to protect our rights and safety.',
+  'pp_data_security_title': '5. Data Security',
+  'pp_data_security_body':
+      'We implement appropriate security measures to protect your personal information, including encryption in transit and at rest. However, no method of transmission over the Internet is 100% secure, and we cannot guarantee absolute security.',
+  'pp_data_retention_title': '6. Data Retention',
+  'pp_data_retention_body':
+      'We retain your personal data as long as your account is active. When you delete your account, we will delete your personal data within 30 days, except where retention is required by law.',
+  'pp_your_rights_title': '7. Your Rights',
+  'pp_your_rights_body':
+      'You have the right to:\n\n• Access your personal data\n• Correct inaccurate information\n• Delete your account and associated data\n• Opt out of push notifications\n• Request a copy of your data\n• Withdraw consent for data processing',
+  'pp_children_title': '8. Children\'s Privacy',
+  'pp_children_body':
+      'BloodReq is not intended for children under 18 years of age. We do not knowingly collect personal information from children. If we discover that a child has provided us with personal data, we will delete it promptly.',
+  'pp_changes_title': '9. Changes to This Policy',
+  'pp_changes_body':
+      'We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy in the app. Your continued use of BloodReq after changes constitutes acceptance of the updated policy.',
+  'pp_contact_title': '10. Contact Us',
+  'pp_contact_body':
+      'If you have any questions about this Privacy Policy or our data practices, please contact us at:\n\nEmail: support@bloodreq.com\nWebsite: https://bloodreq.com',
 };

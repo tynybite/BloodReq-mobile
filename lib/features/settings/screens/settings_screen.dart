@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
@@ -52,19 +52,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => const _LanguageBottomSheet(),
     );
-  }
-
-  Future<void> _openUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not open $url')));
-      }
-    }
   }
 
   void _showAboutDialog() {
@@ -240,7 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _PremiumSettingsTile(
           icon: Icons.description_rounded,
           title: lang.getText('terms_service'),
-          onTap: () => _openUrl('https://bloodreq.com/terms'),
+          onTap: () => context.push('/terms-of-service'),
           isDark: isDark,
           delay: 700,
         ),
@@ -248,7 +235,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _PremiumSettingsTile(
           icon: Icons.privacy_tip_rounded,
           title: lang.getText('privacy_policy'),
-          onTap: () => _openUrl('https://bloodreq.com/privacy'),
+          onTap: () => context.push('/privacy-policy'),
           isDark: isDark,
           delay: 800,
         ),

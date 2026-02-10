@@ -241,4 +241,70 @@ const Map<String, String> de = {
   'time_m_ago': 'm her',
   'time_h_ago': 'h her',
   'time_d_ago': 't her',
+
+  // Terms of Service
+  'tos_last_updated': 'Zuletzt aktualisiert: 10. Februar 2026',
+  'tos_acceptance_title': '1. Annahme der Bedingungen',
+  'tos_acceptance_body':
+      'Durch das Herunterladen, Installieren oder Verwenden der BloodReq-Anwendung stimmen Sie diesen Nutzungsbedingungen zu. Wenn Sie diesen Bedingungen nicht zustimmen, verwenden Sie die Anwendung bitte nicht.',
+  'tos_eligibility_title': '2. Berechtigung',
+  'tos_eligibility_body':
+      'Sie müssen mindestens 18 Jahre alt sein, um diese Anwendung zu nutzen. Durch die Nutzung von BloodReq bestätigen Sie, dass Sie mindestens 18 Jahre alt sind und die rechtliche Fähigkeit haben, diesen Bedingungen zuzustimmen.',
+  'tos_account_title': '3. Benutzerkonto',
+  'tos_account_body':
+      'Sie sind für die Wahrung der Vertraulichkeit Ihrer Kontodaten verantwortlich. Sie stimmen zu, bei der Registrierung genaue und vollständige Informationen anzugeben und Ihre Profilinformationen aktuell zu halten. Sie sind für alle Aktivitäten unter Ihrem Konto verantwortlich.',
+  'tos_services_title': '4. Dienstleistungen',
+  'tos_services_body':
+      'BloodReq ist eine Plattform, die Blutspender mit bedürftigen Patienten verbindet. Wir garantieren weder die Verfügbarkeit von Blutspendern noch den Erfolg einer Blutspende. BloodReq ist kein medizinischer Dienstleister und bietet keine medizinische Beratung an. Konsultieren Sie immer einen qualifizierten Arzt für medizinische Entscheidungen.',
+  'tos_user_conduct_title': '5. Nutzerverhalten',
+  'tos_user_conduct_body':
+      'Sie stimmen zu, Folgendes nicht zu tun:\n• Falsche oder irreführende Informationen veröffentlichen\n• Die App für rechtswidrige Zwecke verwenden\n• Andere Benutzer belästigen, missbrauchen oder schädigen\n• Unbefugten Zugriff auf andere Konten versuchen\n• Die ordnungsgemäße Funktion der Anwendung stören\n• Die Plattform unbefugt für kommerzielle Zwecke nutzen',
+  'tos_disclaimer_title': '6. Medizinischer Haftungsausschluss',
+  'tos_disclaimer_body':
+      'BloodReq bietet keine medizinische Beratung, Diagnose oder Behandlung. Die App dient ausschließlich als Kommunikationsplattform. Alle medizinischen Entscheidungen, einschließlich der Eignung zur Blutspende, sollten in Absprache mit qualifizierten medizinischen Fachkräften getroffen werden.',
+  'tos_liability_title': '7. Haftungsbeschränkung',
+  'tos_liability_body':
+      'BloodReq und seine Entwickler haften nicht für direkte, indirekte, zufällige, besondere oder Folgeschäden, die aus der Nutzung der Anwendung entstehen. Der Dienst wird ohne jegliche Garantien "wie besehen" bereitgestellt.',
+  'tos_termination_title': '8. Kündigung',
+  'tos_termination_body':
+      'Wir behalten uns das Recht vor, Ihr Konto jederzeit mit oder ohne Vorankündigung zu sperren oder zu kündigen, bei Verstößen gegen diese Bedingungen oder aus anderen Gründen. Sie können Ihr Konto auch jederzeit über die App-Einstellungen löschen.',
+  'tos_changes_title': '9. Änderungen der Bedingungen',
+  'tos_changes_body':
+      'Wir können diese Nutzungsbedingungen von Zeit zu Zeit aktualisieren. Über wesentliche Änderungen werden wir Sie über die App informieren. Ihre fortgesetzte Nutzung von BloodReq nach Änderungen gilt als Zustimmung zu den aktualisierten Bedingungen.',
+  'tos_contact_title': '10. Kontakt',
+  'tos_contact_body':
+      'Wenn Sie Fragen zu diesen Nutzungsbedingungen haben, kontaktieren Sie uns bitte unter:\n\nE-Mail: support@bloodreq.com\nWebsite: https://bloodreq.com',
+
+  // Privacy Policy
+  'pp_last_updated': 'Zuletzt aktualisiert: 10. Februar 2026',
+  'pp_intro_title': '1. Einleitung',
+  'pp_intro_body':
+      'BloodReq ("wir", "unser" oder "uns") verpflichtet sich, Ihre Privatsphäre zu schützen. Diese Datenschutzrichtlinie erklärt, wie wir Ihre Informationen sammeln, verwenden, offenlegen und schützen, wenn Sie unsere mobile Anwendung nutzen.',
+  'pp_info_collect_title': '2. Erfasste Informationen',
+  'pp_info_collect_body':
+      'Wir erfassen folgende Arten von Informationen:\n\n• Persönliche Daten: Name, E-Mail-Adresse, Telefonnummer, Blutgruppe und Standort (Stadt/Land).\n• Profilinformationen: Profilfoto, Spendenhistorie und Verfügbarkeitsstatus.\n• Standortdaten: Ihr ungefährer Standort, um Sie mit Blutanfragen in der Nähe abzugleichen.\n• Geräteinformationen: Gerätetyp, Betriebssystem und Push-Benachrichtigungstokens.\n• Nutzungsdaten: App-Nutzungsmuster und Interaktionsdaten zur Verbesserung unserer Dienste.',
+  'pp_info_use_title': '3. Verwendung Ihrer Informationen',
+  'pp_info_use_body':
+      'Wir verwenden Ihre Informationen, um:\n\n• Blutspender mit bedürftigen Patienten zu verbinden\n• Benachrichtigungen über Blutanfragen in der Nähe zu senden\n• Ihr Profil potenziellen Empfängern anzuzeigen\n• Bestenlisten und Spendenstatistiken zu führen\n• Unsere App und Dienste zu verbessern\n• Wichtige Updates und Ankündigungen zu kommunizieren\n• Die Sicherheit unserer Plattform zu gewährleisten',
+  'pp_info_share_title': '4. Informationsweitergabe',
+  'pp_info_share_body':
+      'Wir verkaufen Ihre persönlichen Daten nicht. Wir können Ihre Informationen in folgenden Fällen weitergeben:\n\n• An andere Benutzer: Ihr Name, Ihre Blutgruppe und Ihr allgemeiner Standort sind für Benutzer sichtbar, die Spender suchen.\n• An Dienstleister: Wir nutzen Drittanbieterdienste (Firebase, Analytics), die Ihre Daten verarbeiten können.\n• Rechtliche Anforderungen: Wenn gesetzlich vorgeschrieben oder zum Schutz unserer Rechte und Sicherheit.',
+  'pp_data_security_title': '5. Datensicherheit',
+  'pp_data_security_body':
+      'Wir implementieren angemessene Sicherheitsmaßnahmen zum Schutz Ihrer persönlichen Daten, einschließlich Verschlüsselung bei der Übertragung und im Ruhezustand. Keine Übertragungsmethode über das Internet ist jedoch zu 100% sicher, und wir können keine absolute Sicherheit garantieren.',
+  'pp_data_retention_title': '6. Datenspeicherung',
+  'pp_data_retention_body':
+      'Wir speichern Ihre persönlichen Daten, solange Ihr Konto aktiv ist. Wenn Sie Ihr Konto löschen, werden wir Ihre persönlichen Daten innerhalb von 30 Tagen löschen, es sei denn, die Aufbewahrung ist gesetzlich vorgeschrieben.',
+  'pp_your_rights_title': '7. Ihre Rechte',
+  'pp_your_rights_body':
+      'Sie haben das Recht:\n\n• Auf Ihre persönlichen Daten zuzugreifen\n• Ungenaue Informationen zu korrigieren\n• Ihr Konto und zugehörige Daten zu löschen\n• Push-Benachrichtigungen abzulehnen\n• Eine Kopie Ihrer Daten anzufordern\n• Die Einwilligung zur Datenverarbeitung zu widerrufen',
+  'pp_children_title': '8. Schutz von Kindern',
+  'pp_children_body':
+      'BloodReq ist nicht für Kinder unter 18 Jahren bestimmt. Wir sammeln wissentlich keine persönlichen Daten von Kindern. Wenn wir feststellen, dass ein Kind uns persönliche Daten bereitgestellt hat, werden wir diese umgehend löschen.',
+  'pp_changes_title': '9. Änderungen dieser Richtlinie',
+  'pp_changes_body':
+      'Wir können diese Datenschutzrichtlinie von Zeit zu Zeit aktualisieren. Über wesentliche Änderungen informieren wir Sie durch Veröffentlichung der neuen Richtlinie in der App. Ihre fortgesetzte Nutzung von BloodReq nach Änderungen gilt als Zustimmung zur aktualisierten Richtlinie.',
+  'pp_contact_title': '10. Kontakt',
+  'pp_contact_body':
+      'Wenn Sie Fragen zu dieser Datenschutzrichtlinie oder unseren Datenpraktiken haben, kontaktieren Sie uns bitte unter:\n\nE-Mail: support@bloodreq.com\nWebsite: https://bloodreq.com',
 };
