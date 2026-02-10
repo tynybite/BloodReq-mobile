@@ -16,7 +16,7 @@ jobs:
       has_nextjs: ${{ steps.detect.outputs.has_nextjs }}
       nextjs_dir: ${{ steps.detect.outputs.nextjs_dir }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - id: detect
         shell: bash
@@ -56,7 +56,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Dependency review
         uses: actions/dependency-review-action@v4
         with:
@@ -70,7 +70,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -117,7 +117,7 @@ jobs:
       run:
         working-directory: ${{ needs.detect-projects.outputs.nextjs_dir }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
