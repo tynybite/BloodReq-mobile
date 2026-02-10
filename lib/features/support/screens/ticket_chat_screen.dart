@@ -136,8 +136,9 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
         actions: [
           Consumer<SupportProvider>(
             builder: (context, provider, _) {
-              if (provider.currentTicket == null)
+              if (provider.currentTicket == null) {
                 return const SizedBox.shrink();
+              }
               return IconButton(
                 icon: Icon(Icons.refresh_rounded, color: context.textSecondary),
                 onPressed: () =>

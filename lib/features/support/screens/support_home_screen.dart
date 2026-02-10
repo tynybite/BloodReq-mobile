@@ -73,7 +73,8 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.isDark;
+    // final isDark = context.isDark; // Unused
+
     final lang = context.read<LanguageProvider>();
 
     return Scaffold(

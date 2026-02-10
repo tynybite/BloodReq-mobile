@@ -14,6 +14,12 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const BloodReqApp());
 
+    // Allow time for AuthProvider's 5-second timeout to complete
+    await tester.pump(const Duration(seconds: 6));
+
+    // Wait for any remaining animations
+    // await tester.pumpAndSettle(); // Infinite animation causes timeout
+
     // Verify that the app starts without crashing
     expect(find.byType(BloodReqApp), findsOneWidget);
   });

@@ -33,19 +33,45 @@ run_flutter_checks() {
   log "Running Flutter quality checks..."
   flutter pub get
   dart format --output=none --set-exit-if-changed .
-  flutter analyze
+  flutter analyze --no-pub
   flutter test --no-pub
   flutter build apk --debug --no-pub
 }
 
 run_flutter_vulnerability_scan() {
+  if [[ "${SKIP_VULN_SCAN:-0}" == "1" ]]; then
+    log "Skipping vulnerability scan because SKIP_VULN_SCAN=1"
+    return 0
+  fi
+
   if ! command -v trivy >/dev/null 2>&1; then
     log "trivy is required for vulnerability checks. Install: brew install trivy"
+    log "Temporary bypass for one commit: SKIP_VULN_SCAN=1 git commit ..."
     return 1
   fi
 
   log "Running Flutter dependency vulnerability scan..."
-  trivy fs --scanners vuln --vuln-type library --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 .
+  local trivy_log
+  trivy_log="$(mktemp)"
+
+  if trivy fs --scanners vuln --pkg-types library --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 . >"$trivy_log" 2>&1; then
+    cat "$trivy_log"
+    rm -f "$trivy_log"
+    return 0
+  fi
+
+  cat "$trivy_log"
+
+  # Don't block commits on transient DB/network issues; CI still enforces this gate.
+  if grep -q "failed to download vulnerability DB" "$trivy_log" || grep -q "no such host" "$trivy_log"; then
+    log "Vulnerability DB is unreachable right now. Skipping local vuln gate for this commit."
+    log "CI will run vulnerability checks again."
+    rm -f "$trivy_log"
+    return 0
+  fi
+
+  rm -f "$trivy_log"
+  return 1
 }
 
 install_node_deps() {
