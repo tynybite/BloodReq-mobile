@@ -74,7 +74,7 @@ jobs:
         run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
 
       - name: Upload Flutter artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: flutter-release-apks
           path: |
@@ -117,7 +117,7 @@ jobs:
         run: npm run build
 
       - name: Upload Next.js build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: nextjs-build-output
           path: |
