@@ -12,6 +12,7 @@ import '../../../core/providers/scroll_control_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/sync_service.dart';
 import '../../../core/models/blood_request.dart';
+import '../../../core/providers/language_provider.dart';
 import '../../../shared/widgets/request_card.dart';
 import '../../../shared/widgets/fundraiser_card.dart';
 import '../../../shared/widgets/banner_ad_widget.dart';
@@ -192,27 +193,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         // Welcome Text
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Welcome back,',
-                                style: TextStyle(
-                                  color: context.textSecondary,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                userName,
-                                style: TextStyle(
-                                  color: context.textPrimary,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                          child: Consumer<LanguageProvider>(
+                            builder: (context, lang, _) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    lang.getText('welcome'),
+                                    style: TextStyle(
+                                      color: context.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    userName == 'Savior'
+                                        ? lang.getText('savior')
+                                        : userName,
+                                    style: TextStyle(
+                                      color: context.textPrimary,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
 
@@ -297,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
               SliverToBoxAdapter(
                 child:
                     Padding(
-                          padding: const EdgeInsets.only(top: 16, bottom: 8),
+                          padding: const EdgeInsets.only(top: 10, bottom: 0),
                           child: HeroCarousel(city: user?.city, limit: 5),
                         )
                         .animate()
@@ -308,7 +315,10 @@ class _HomeScreenState extends State<HomeScreen> {
               // Banner Ad - After Hero Carousel
               const SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 0,
+                  ), // Removed vertical padding
                   child: BannerAdWidget(height: 50),
                 ),
               ),
@@ -316,37 +326,47 @@ class _HomeScreenState extends State<HomeScreen> {
               // Quick Stats
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.water_drop,
-                          iconColor: AppColors.primary,
-                          value: user?.totalDonations.toString() ?? '0',
-                          label: 'Donations',
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.star,
-                          iconColor: AppColors.accent,
-                          value: user?.points.toString() ?? '0',
-                          label: 'Points',
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.emoji_events,
-                          iconColor: AppColors.success,
-                          value:
-                              user?.calculatedBadgeTier.toUpperCase() ?? 'NEW',
-                          label: 'Badge',
-                        ),
-                      ),
-                    ],
+                  padding: const EdgeInsets.fromLTRB(
+                    20,
+                    4,
+                    20,
+                    4,
+                  ), // Reduced top/bottom padding significantly
+                  child: Consumer<LanguageProvider>(
+                    builder: (context, lang, _) {
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              icon: Icons.water_drop,
+                              iconColor: AppColors.primary,
+                              value: user?.totalDonations.toString() ?? '0',
+                              label: lang.getText('donations'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _StatCard(
+                              icon: Icons.star,
+                              iconColor: AppColors.accent,
+                              value: user?.points.toString() ?? '0',
+                              label: lang.getText('points'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _StatCard(
+                              icon: Icons.emoji_events,
+                              iconColor: AppColors.success,
+                              value:
+                                  user?.calculatedBadgeTier.toUpperCase() ??
+                                  lang.getText('new_badge'),
+                              label: lang.getText('badge'),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ).animate(delay: 100.ms).fadeIn(duration: 500.ms),
                 ),
               ),
@@ -355,60 +375,65 @@ class _HomeScreenState extends State<HomeScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Quick Actions',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
+                  child: Consumer<LanguageProvider>(
+                    builder: (context, lang, _) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: _ActionCard(
-                              icon: Icons.search,
-                              title: 'Find Requests',
-                              color: AppColors.info,
-                              onTap: () => context.go('/requests'),
-                            ),
+                          Text(
+                            lang.getText('quick_actions'),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _ActionCard(
-                              icon: Icons.leaderboard,
-                              title: 'Leaderboard',
-                              color: AppColors.accent,
-                              onTap: () => context.push('/leaderboard'),
-                            ),
+                          const SizedBox(height: 8), // Reduced from 12
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _ActionCard(
+                                  icon: Icons.search,
+                                  title: lang.getText('find_requests'),
+                                  color: AppColors.info,
+                                  onTap: () => context.go('/requests'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _ActionCard(
+                                  icon: Icons.leaderboard,
+                                  title: lang.getText('leaderboard'),
+                                  color: AppColors.accent,
+                                  onTap: () => context.push('/leaderboard'),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ],
+                      );
+                    },
                   ).animate(delay: 200.ms).fadeIn(duration: 500.ms),
-                ),
-              ),
-
-              // Banner Ad - After Quick Actions
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: BannerAdWidget(height: 50),
                 ),
               ),
 
               // Recent Updates Section (Unified Feed)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(
+                    20,
+                    10,
+                    20,
+                    8,
+                  ), // Added small top padding back
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Recent Updates',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                      Consumer<LanguageProvider>(
+                        builder: (context, lang, _) {
+                          return Text(
+                            lang.getText('recent_updates'),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          );
+                        },
                       ),
                       // Optional: Link to see all requests if mostly requests, or remove
                     ],
@@ -426,9 +451,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32.0),
-                      child: Text(
-                        'No recent updates',
-                        style: TextStyle(color: AppColors.textTertiary),
+                      child: Consumer<LanguageProvider>(
+                        builder: (context, lang, _) {
+                          return Text(
+                            lang.getText('no_recent_updates'),
+                            style: TextStyle(color: AppColors.textTertiary),
+                          );
+                        },
                       ),
                     ),
                   ),

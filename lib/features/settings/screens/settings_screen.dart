@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_theme.dart';
-import '../../../core/providers/auth_provider.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/theme_provider.dart';
+import '../../../core/providers/language_provider.dart';
+import '../../../core/config/language_config.dart';
 import '../../../core/services/notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -18,7 +19,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
-  String _selectedLanguage = 'English';
   final NotificationService _notificationService = NotificationService();
 
   @override
@@ -28,12 +28,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedLang = prefs.getString('language_code');
     final isPushEnabled = _notificationService.isPushEnabled;
-
     setState(() {
-      _selectedLanguage = savedLang == 'bn' ? 'Bangla' : 'English';
       _notificationsEnabled = isPushEnabled;
     });
   }
@@ -50,26 +46,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _setLanguage(String langCode) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language_code', langCode);
-
-    setState(() {
-      _selectedLanguage = langCode == 'bn' ? 'Bangla' : 'English';
-    });
-  }
-
   void _showLanguagePicker() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => _LanguageBottomSheet(
-        selectedLanguage: _selectedLanguage,
-        onSelect: (langCode) {
-          _setLanguage(langCode);
-          Navigator.pop(context);
-        },
-      ),
+      builder: (context) => const _LanguageBottomSheet(),
     );
   }
 
@@ -96,29 +77,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final user = Provider.of<AuthProvider>(context).user;
+    final lang = Provider.of<LanguageProvider>(context);
+
+    // Account info removed as requested
 
     return Scaffold(
       backgroundColor: context.scaffoldBg,
       body: CustomScrollView(
         slivers: [
-          _buildPremiumAppBar(isDark),
+          _buildPremiumAppBar(isDark, lang),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                if (user != null) ...[
-                  _SectionHeader(title: 'Account', isDark: isDark),
-                  _buildProfileCard(user, isDark),
-                  const SizedBox(height: 24),
-                ],
-                _SectionHeader(title: 'Preferences', isDark: isDark),
-                _buildPreferencesSection(isDark),
+                _SectionHeader(
+                  title: lang.getText('preferences'),
+                  isDark: isDark,
+                ),
+                _buildPreferencesSection(isDark, lang),
                 const SizedBox(height: 24),
-                _SectionHeader(title: 'Support & About', isDark: isDark),
-                _buildSupportSection(isDark),
+                _SectionHeader(
+                  title: lang.getText('support_section'),
+                  isDark: isDark,
+                ),
+                _buildSupportSection(isDark, lang),
                 const SizedBox(height: 48),
-                _buildVersionInfo(isDark),
+                _buildVersionInfo(isDark, lang),
                 const SizedBox(height: 100),
               ]),
             ),
@@ -128,7 +112,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildPremiumAppBar(bool isDark) {
+  Widget _buildPremiumAppBar(bool isDark, LanguageProvider lang) {
     return SliverAppBar(
       expandedHeight: 140,
       floating: false,
@@ -163,7 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   const Spacer(),
                   Text(
-                        'Settings',
+                        lang.getText('settings_title'),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 32,
@@ -176,7 +160,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       .slideX(begin: -0.1, end: 0, curve: Curves.easeOut),
                   const SizedBox(height: 4),
                   Text(
-                    'Manage your preferences',
+                    lang.getText('settings_subtitle'),
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 15,
@@ -193,86 +177,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildProfileCard(dynamic user, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primary.withValues(alpha: 0.1),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.2),
-                width: 2,
-              ),
-            ),
-            child: Icon(
-              Icons.person_rounded,
-              size: 32,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user?.fullName ?? 'Guest User',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: context.textPrimary,
-                  ),
-                ),
-                if (user?.phoneNumber != null)
-                  Text(
-                    user!.phoneNumber!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () {
-              // Edit profile navigation
-            },
-            icon: Icon(Icons.edit_rounded, color: AppColors.primary),
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-            ),
-          ),
-        ],
-      ),
-    ).animate(delay: 200.ms).fadeIn().slideY(begin: 0.1, end: 0);
-  }
+  Widget _buildPreferencesSection(bool isDark, LanguageProvider lang) {
+    final currentLangName = LanguageConfig.getOption(
+      lang.currentLocale.languageCode,
+    ).name;
 
-  Widget _buildPreferencesSection(bool isDark) {
     return Column(
       children: [
         Consumer<ThemeProvider>(
           builder: (context, themeProvider, _) {
             return _PremiumSettingsTile(
               icon: Icons.dark_mode_rounded,
-              title: 'Dark Mode',
-              subtitle: 'Easier on your eyes',
+              title: lang.getText('dark_mode'),
+              subtitle: lang.getText('dark_mode_desc'),
               trailing: Switch(
                 value: themeProvider.isDarkMode,
                 onChanged: (_) => themeProvider.toggleTheme(),
@@ -286,8 +203,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 12),
         _PremiumSettingsTile(
           icon: Icons.language_rounded,
-          title: 'Language',
-          subtitle: _selectedLanguage,
+          title: lang.getText('language'),
+          subtitle: currentLangName,
           onTap: _showLanguagePicker,
           isDark: isDark,
           delay: 400,
@@ -295,8 +212,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 12),
         _PremiumSettingsTile(
           icon: Icons.notifications_active_rounded,
-          title: 'Push Notifications',
-          subtitle: 'Stay updated',
+          title: lang.getText('push_notifications'),
+          subtitle: lang.getText('push_notifications_desc'),
           trailing: Switch(
             value: _notificationsEnabled,
             onChanged: _toggleNotifications,
@@ -309,12 +226,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSupportSection(bool isDark) {
+  Widget _buildSupportSection(bool isDark, LanguageProvider lang) {
     return Column(
       children: [
         _PremiumSettingsTile(
           icon: Icons.info_rounded,
-          title: 'About BloodReq',
+          title: lang.getText('about_app'),
           onTap: _showAboutDialog,
           isDark: isDark,
           delay: 600,
@@ -322,7 +239,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 12),
         _PremiumSettingsTile(
           icon: Icons.description_rounded,
-          title: 'Terms of Service',
+          title: lang.getText('terms_service'),
           onTap: () => _openUrl('https://bloodreq.com/terms'),
           isDark: isDark,
           delay: 700,
@@ -330,7 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 12),
         _PremiumSettingsTile(
           icon: Icons.privacy_tip_rounded,
-          title: 'Privacy Policy',
+          title: lang.getText('privacy_policy'),
           onTap: () => _openUrl('https://bloodreq.com/privacy'),
           isDark: isDark,
           delay: 800,
@@ -339,7 +256,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildVersionInfo(bool isDark) {
+  Widget _buildVersionInfo(bool isDark, LanguageProvider lang) {
     return Center(
       child: Column(
         children: [
@@ -352,7 +269,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               .scale(begin: const Offset(0.9, 0.9)),
           const SizedBox(height: 8),
           Text(
-            'BloodReq v1.0.0',
+            '${lang.getText('app_name')} v${AppConstants.appVersion}',
             style: TextStyle(
               color: AppColors.textTertiary,
               fontSize: 13,
@@ -362,7 +279,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Made with ❤️ for humanity',
+            lang.getText('made_with_love'),
             style: TextStyle(
               color: AppColors.textTertiary.withValues(alpha: 0.7),
               fontSize: 11,
@@ -503,17 +420,13 @@ class _PremiumSettingsTile extends StatelessWidget {
 }
 
 class _LanguageBottomSheet extends StatelessWidget {
-  final String selectedLanguage;
-  final Function(String) onSelect;
-
-  const _LanguageBottomSheet({
-    required this.selectedLanguage,
-    required this.onSelect,
-  });
+  const _LanguageBottomSheet();
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final languageProvider = context.watch<LanguageProvider>();
+    final currentCode = languageProvider.currentLocale.languageCode;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -521,43 +434,52 @@ class _LanguageBottomSheet extends StatelessWidget {
         color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Select Language',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: context.textPrimary,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  languageProvider.getText('select_language'),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: context.textPrimary,
+                  ),
                 ),
-              ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _LanguageItem(
-            label: 'English',
-            isSelected: selectedLanguage == 'English',
-            onTap: () => onSelect('en'),
-            isDark: isDark,
-          ),
-          const SizedBox(height: 12),
-          _LanguageItem(
-            label: 'Bangla',
-            isSelected: selectedLanguage == 'Bangla',
-            onTap: () => onSelect('bn'),
-            isDark: isDark,
-          ),
-          const SizedBox(height: 32),
-        ],
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            ...LanguageConfig.options.map((option) {
+              return Column(
+                children: [
+                  _LanguageItem(
+                    label: option.name,
+                    flag: option.flag,
+                    isSelected: currentCode == option.code,
+                    onTap: () {
+                      languageProvider.changeLanguage(Locale(option.code));
+                      Navigator.pop(context);
+                    },
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              );
+            }),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
@@ -565,12 +487,14 @@ class _LanguageBottomSheet extends StatelessWidget {
 
 class _LanguageItem extends StatelessWidget {
   final String label;
+  final String flag;
   final bool isSelected;
   final VoidCallback onTap;
   final bool isDark;
 
   const _LanguageItem({
     required this.label,
+    required this.flag,
     required this.isSelected,
     required this.onTap,
     required this.isDark,
@@ -597,13 +521,21 @@ class _LanguageItem extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? AppColors.primary : context.textPrimary,
-              ),
+            Row(
+              children: [
+                Text(flag, style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 12),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    color: isSelected ? AppColors.primary : context.textPrimary,
+                  ),
+                ),
+              ],
             ),
             if (isSelected)
               Icon(Icons.check_circle_rounded, color: AppColors.primary),
@@ -620,6 +552,7 @@ class _PremiumAboutDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lang = Provider.of<LanguageProvider>(context);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -654,7 +587,7 @@ class _PremiumAboutDialog extends StatelessWidget {
             ).animate().scale(curve: Curves.elasticOut),
             const SizedBox(height: 20),
             Text(
-              'BloodReq',
+              lang.getText('app_name'),
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
@@ -662,7 +595,7 @@ class _PremiumAboutDialog extends StatelessWidget {
               ),
             ),
             Text(
-              'Version 1.0.0',
+              '${lang.getText('version')} ${AppConstants.appVersion}',
               style: TextStyle(
                 fontSize: 14,
                 color: AppColors.textSecondary,
@@ -671,7 +604,7 @@ class _PremiumAboutDialog extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'BloodReq is a non-profit initiative to connect blood donors with patients in real-time. Together we can save lives.',
+              lang.getText('about_desc'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
@@ -693,9 +626,9 @@ class _PremiumAboutDialog extends StatelessWidget {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Close',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                child: Text(
+                  lang.getText('close'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ),

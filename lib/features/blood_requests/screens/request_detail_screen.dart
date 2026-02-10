@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:geolocator/geolocator.dart'; // Added geolocator
+import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
 import '../../../shared/utils/app_toast.dart';
+import '../../../core/providers/language_provider.dart';
 
 class RequestDetailScreen extends StatefulWidget {
   final String requestId;
@@ -23,7 +25,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   bool _isLoading = true;
   String? _error;
   bool _offering = false;
-  String? _distance; // Added for distance display
+  String? _distance;
 
   @override
   void initState() {
@@ -43,7 +45,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
     if (response.success && response.data != null) {
       setState(() => _request = response.data as Map<String, dynamic>);
-      _calculateDistance(); // Calculate distance once data is loaded
+      _calculateDistance();
     } else {
       setState(() => _error = response.message ?? 'Failed to load request');
     }
@@ -59,7 +61,6 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     }
 
     try {
-      // Check permissions first (usually handled in splash/home, but safe to check)
       final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
@@ -82,7 +83,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     }
   }
 
-  Future<void> _offerToDonate() async {
+  Future<void> _offerToDonate(LanguageProvider lang) async {
     setState(() => _offering = true);
 
     final response = await _api.post(
@@ -95,11 +96,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     if (!mounted) return;
 
     if (response.success) {
-      AppToast.success(context, 'Thank you! Your offer has been recorded.');
-      _loadRequest(); // Refresh to show updated donor count
+      AppToast.success(context, lang.getText('toast_offer_success'));
+      _loadRequest();
     } else {
-      // Show appropriate message type based on error
-      final message = response.message ?? 'Failed to offer donation';
+      final message = response.message ?? lang.getText('toast_offer_failed');
       if (message.toLowerCase().contains('cannot') ||
           message.toLowerCase().contains('forbidden')) {
         AppToast.warning(context, message);
@@ -122,34 +122,41 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.scaffoldBg,
-      appBar: AppBar(
-        title: const Text('Request Details'),
-        backgroundColor: context.scaffoldBg,
-        surfaceTintColor: Colors.transparent,
-        actions: [
-          if (_request != null)
-            IconButton(
-              icon: const Icon(Icons.share_outlined),
-              onPressed: () {
-                Share.share(
-                  'URGENT: ${_request!['blood_group']} Blood Needed!\n'
-                  'Patient: ${_request!['patient_name']}\n'
-                  'Hospital: ${_request!['hospital']}\n'
-                  'Contact: ${_request!['contact_number']}\n\n'
-                  'Please help if you can! #BloodReq',
-                );
-              },
-            ),
-        ],
-      ),
-      body: _buildBody(),
-      bottomNavigationBar: _request != null ? _buildBottomBar() : null,
+    return Consumer<LanguageProvider>(
+      builder: (context, lang, _) {
+        return Scaffold(
+          backgroundColor: context.scaffoldBg,
+          appBar: AppBar(
+            title: Text(lang.getText('request_details_title')),
+            backgroundColor: context.scaffoldBg,
+            surfaceTintColor: Colors.transparent,
+            actions: [
+              if (_request != null)
+                IconButton(
+                  icon: const Icon(Icons.share_outlined),
+                  onPressed: () {
+                    final shareText = lang
+                        .getText('share_text')
+                        .replaceAll('{group}', _request!['blood_group'] ?? '')
+                        .replaceAll('{name}', _request!['patient_name'] ?? '')
+                        .replaceAll('{hospital}', _request!['hospital'] ?? '')
+                        .replaceAll(
+                          '{contact}',
+                          _request!['contact_number'] ?? '',
+                        );
+                    Share.share(shareText);
+                  },
+                ),
+            ],
+          ),
+          body: _buildBody(lang),
+          bottomNavigationBar: _request != null ? _buildBottomBar(lang) : null,
+        );
+      },
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(LanguageProvider lang) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -167,7 +174,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadRequest,
-                child: const Text('Retry'),
+                child: Text(lang.getText('retry')),
               ),
             ],
           ),
@@ -176,7 +183,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     }
 
     if (_request == null) {
-      return const Center(child: Text('Request not found'));
+      return Center(child: Text(lang.getText('no_requests_found')));
     }
 
     return SingleChildScrollView(
@@ -226,7 +233,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _request!['patient_name'] ?? 'Patient',
+                        _request!['patient_name'] ?? lang.getText('patient'),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 20,
@@ -257,7 +264,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '${_request!['units'] ?? 1} unit(s) needed',
+                            '${_request!['units'] ?? 1} ${(_request!['units'] ?? 1) > 1 ? lang.getText('units') : lang.getText('unit')} ${lang.getText('needed')}',
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 13,
@@ -291,21 +298,25 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               children: [
                 _DetailRow(
                   icon: Icons.local_hospital_outlined,
-                  label: 'Hospital',
-                  value: _request!['hospital'] ?? 'Not specified',
+                  label: lang.getText('hospital'),
+                  value: _request!['hospital'] ?? lang.getText('not_specified'),
                 ),
                 const Divider(height: 24),
                 _DetailRow(
                   icon: Icons.location_on_outlined,
-                  label: 'Location',
-                  value: _request!['city'] ?? 'Not specified',
-                  extras: _distance != null ? 'Approx $_distance away' : null,
+                  label: lang.getText('location'),
+                  value: _request!['city'] ?? lang.getText('not_specified'),
+                  extras: _distance != null
+                      ? '${lang.getText('approx')} $_distance ${lang.getText('away')}'
+                      : null,
                 ),
                 const Divider(height: 24),
                 _DetailRow(
                   icon: Icons.phone_outlined,
-                  label: 'Contact',
-                  value: _request!['contact_number'] ?? 'Not available',
+                  label: lang.getText('contact'),
+                  value:
+                      _request!['contact_number'] ??
+                      lang.getText('not_available'),
                   isPhone: true,
                   onTap: () async {
                     final phone = _request!['contact_number'];
@@ -322,7 +333,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   const Divider(height: 24),
                   _DetailRow(
                     icon: Icons.notes_outlined,
-                    label: 'Notes',
+                    label: lang.getText('notes'),
                     value: _request!['notes'],
                   ),
                 ],
@@ -361,14 +372,14 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${_request!['donor_count'] ?? 0} Donors',
+                        '${_request!['donor_count'] ?? 0} ${lang.getText('donors_count')}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                         ),
                       ),
                       Text(
-                        'have offered to help',
+                        lang.getText('offered_to_help'),
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
@@ -387,7 +398,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     );
   }
 
-  Widget _buildBottomBar() {
+  Widget _buildBottomBar(LanguageProvider lang) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -475,7 +486,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               child: SizedBox(
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _offering ? null : _offerToDonate,
+                  onPressed: _offering ? null : () => _offerToDonate(lang),
                   child: _offering
                       ? const SizedBox(
                           width: 24,
@@ -485,7 +496,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Offer to Donate'),
+                      : Text(lang.getText('offer_to_donate')),
                 ),
               ),
             ),

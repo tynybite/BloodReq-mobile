@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
 import '../../../shared/utils/app_toast.dart';
+import '../../../core/providers/language_provider.dart';
 
 class FundraiserDetailScreen extends StatefulWidget {
   final String fundraiserId;
@@ -45,7 +47,12 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
         setState(() => _fundraiser = mapData['data'] ?? mapData);
       }
     } else {
-      setState(() => _error = response.message ?? 'Failed to load fundraiser');
+      if (!mounted) return;
+      final lang = Provider.of<LanguageProvider>(context, listen: false);
+      setState(
+        () => _error =
+            response.message ?? lang.getText('load_fundraisers_failed'),
+      );
     }
 
     setState(() => _isLoading = false);
@@ -59,6 +66,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
 
   Future<void> _showDonateSheet() async {
     final amountController = TextEditingController();
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
 
     await showModalBottomSheet(
       context: context,
@@ -80,14 +88,15 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Donate to this fundraiser',
+                  lang.getText('donate_to_fundraiser'),
                   style: Theme.of(
                     sheetContext,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _fundraiser?['title'] ?? 'Fundraiser',
+                  _fundraiser?['title'] ??
+                      lang.getText('fundraiser_default_title'),
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 24),
@@ -97,9 +106,9 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                   controller: amountController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: 'Amount (৳)',
+                    labelText: lang.getText('donation_amount_label'),
                     prefixIcon: const Icon(Icons.attach_money),
-                    hintText: 'Enter donation amount',
+                    hintText: lang.getText('donation_amount_hint'),
                   ),
                   autofocus: true,
                 ),
@@ -131,7 +140,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                             if (amount == null || amount < 10) {
                               AppToast.error(
                                 context,
-                                'Minimum donation is ৳10',
+                                lang.getText('min_donation_error'),
                               );
                               return;
                             }
@@ -152,7 +161,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                               if (mounted) {
                                 AppToast.success(
                                   context,
-                                  'Thank you for your donation!',
+                                  lang.getText('donation_success'),
                                 );
                               }
                               _loadFundraiser(); // Refresh
@@ -160,7 +169,8 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                               if (mounted) {
                                 AppToast.error(
                                   context,
-                                  response.message ?? 'Donation failed',
+                                  response.message ??
+                                      lang.getText('donation_failed'),
                                 );
                               }
                             }
@@ -174,7 +184,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('Donate Now'),
+                        : Text(lang.getText('donate_now')),
                   ),
                 ),
               ],
@@ -195,6 +205,8 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
   }
 
   Widget _buildBody() {
+    final lang = Provider.of<LanguageProvider>(context);
+
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -212,7 +224,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadFundraiser,
-                child: const Text('Retry'),
+                child: Text(lang.getText('retry')),
               ),
             ],
           ),
@@ -221,7 +233,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
     }
 
     if (_fundraiser == null) {
-      return const Center(child: Text('Fundraiser not found'));
+      return Center(child: Text(lang.getText('no_fundraisers')));
     }
 
     return CustomScrollView(
@@ -250,7 +262,8 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
               children: [
                 // Title
                 Text(
-                  _fundraiser!['title'] ?? 'Fundraiser',
+                  _fundraiser!['title'] ??
+                      lang.getText('fundraiser_default_title'),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -334,7 +347,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                                 ),
                               ),
                               Text(
-                                'raised of ৳${_formatAmount(_fundraiser!['amount_needed'] ?? 0)}',
+                                '${lang.getText('raised_of')} ৳${_formatAmount(_fundraiser!['amount_needed'] ?? 0)}',
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 13,
@@ -354,7 +367,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                                 ),
                               ),
                               Text(
-                                'of goal',
+                                lang.getText('of_goal'),
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 13,
@@ -371,14 +384,14 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
 
                 // Description
                 Text(
-                  'About this fundraiser',
+                  lang.getText('about_fundraiser'),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  _fundraiser!['description'] ?? 'No description provided.',
+                  _fundraiser!['description'] ?? lang.getText('no_description'),
                   style: TextStyle(color: AppColors.textSecondary, height: 1.6),
                 ),
 
@@ -405,6 +418,8 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
   }
 
   Widget _buildBottomBar() {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -452,7 +467,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _showDonateSheet,
                   icon: const Icon(Icons.favorite),
-                  label: const Text('Donate Now'),
+                  label: Text(lang.getText('donate_now')),
                 ),
               ),
             ),

@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../core/providers/scroll_control_provider.dart';
 
+import '../../../core/providers/language_provider.dart';
+
 import '../../../core/constants/app_theme.dart';
 
 class MainShell extends StatefulWidget {
@@ -18,35 +20,40 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
 
-  final List<_NavItem> _navItems = [
-    _NavItem(
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home_rounded,
-      label: 'Home',
-      path: '/home',
-    ),
-    _NavItem(
-      icon: Icons.water_drop_outlined,
-      activeIcon: Icons.water_drop,
-      label: 'Requests',
-      path: '/requests',
-    ),
-    _NavItem(
-      icon: Icons.volunteer_activism_outlined,
-      activeIcon: Icons.volunteer_activism,
-      label: 'Funds',
-      path: '/fundraisers',
-    ),
-    _NavItem(
-      icon: Icons.person_outline,
-      activeIcon: Icons.person,
-      label: 'Profile',
-      path: '/profile',
-    ),
-  ];
+  List<_NavItem> _getNavItems(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
+    return [
+      _NavItem(
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home_rounded,
+        label: lang.getText('nav_home'),
+        path: '/home',
+      ),
+      _NavItem(
+        icon: Icons.water_drop_outlined,
+        activeIcon: Icons.water_drop,
+        label: lang.getText('nav_requests'),
+        path: '/requests',
+      ),
+      _NavItem(
+        icon: Icons.volunteer_activism_outlined,
+        activeIcon: Icons.volunteer_activism,
+        label: lang.getText('nav_funds'),
+        path: '/fundraisers',
+      ),
+      _NavItem(
+        icon: Icons.person_outline,
+        activeIcon: Icons.person,
+        label: lang.getText('nav_profile'),
+        path: '/profile',
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final navItems = _getNavItems(context);
+
     return Scaffold(
       body: widget.child,
       extendBody: true,
@@ -83,8 +90,8 @@ class _MainShellState extends State<MainShell> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: List.generate(
-                          _navItems.length,
-                          (index) => _buildNavItem(index),
+                          navItems.length,
+                          (index) => _buildNavItem(index, navItems),
                         ),
                       ),
                     ),
@@ -103,8 +110,8 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  Widget _buildNavItem(int index) {
-    final item = _navItems[index];
+  Widget _buildNavItem(int index, List<_NavItem> items) {
+    final item = items[index];
     final isSelected = _selectedIndex == index;
 
     return GestureDetector(

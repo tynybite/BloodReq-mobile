@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/providers/scroll_control_provider.dart';
+import '../../../core/providers/language_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
 
@@ -48,6 +49,8 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
     });
 
     final response = await _api.get<dynamic>('/fundraisers');
+    if (!mounted) return;
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
 
     if (response.success && response.data != null) {
       List<dynamic> fundList;
@@ -66,7 +69,10 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
         _applyFilters();
       });
     } else {
-      setState(() => _error = response.message ?? 'Failed to load fundraisers');
+      setState(
+        () => _error =
+            response.message ?? lang.getText('load_fundraisers_failed'),
+      );
     }
 
     setState(() => _isLoading = false);
@@ -125,6 +131,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lang = Provider.of<LanguageProvider>(context);
 
     return Scaffold(
       backgroundColor: context.scaffoldBg,
@@ -146,10 +153,10 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
           },
           child: CustomScrollView(
             slivers: [
-              _buildPremiumAppBar(isDark),
-              _buildQuickStats(isDark),
-              _buildFilterRow(isDark),
-              _buildContent(isDark),
+              _buildPremiumAppBar(isDark, lang),
+              _buildQuickStats(isDark, lang),
+              _buildFilterRow(isDark, lang),
+              _buildContent(isDark, lang),
               const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
             ],
           ),
@@ -158,7 +165,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
     );
   }
 
-  Widget _buildPremiumAppBar(bool isDark) {
+  Widget _buildPremiumAppBar(bool isDark, LanguageProvider lang) {
     final totalRaised = _fundraisers.fold<double>(
       0,
       (sum, f) => sum + (f['amount_raised'] ?? 0).toDouble(),
@@ -203,7 +210,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                                  'Fundraisers',
+                                  lang.getText('fundraisers_title'),
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 28,
@@ -220,7 +227,12 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
                                 ),
                             const SizedBox(height: 4),
                             Text(
-                              '${_fundraisers.length} active campaigns',
+                              lang
+                                  .getText('active_campaigns_count')
+                                  .replaceAll(
+                                    '@count',
+                                    '${_fundraisers.length}',
+                                  ),
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.8),
                                 fontSize: 14,
@@ -300,7 +312,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
                   fontSize: 15,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Search fundraisers, patients, hospitals...',
+                  hintText: lang.getText('search_hint'),
                   hintStyle: TextStyle(
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.5)
@@ -342,7 +354,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
     );
   }
 
-  Widget _buildQuickStats(bool isDark) {
+  Widget _buildQuickStats(bool isDark, LanguageProvider lang) {
     final urgentCount = _fundraisers.where((f) {
       final raised = (f['amount_raised'] ?? 0).toDouble();
       final needed = (f['amount_needed'] ?? 1).toDouble();
@@ -365,7 +377,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
                     Expanded(
                       child: _StatCard(
                         icon: Icons.trending_up_rounded,
-                        label: 'Active',
+                        label: lang.getText('stat_active'),
                         value: _fundraisers.length.toString(),
                         color: AppColors.success,
                         isDark: isDark,
@@ -375,7 +387,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
                     Expanded(
                       child: _StatCard(
                         icon: Icons.priority_high_rounded,
-                        label: 'Urgent',
+                        label: lang.getText('stat_urgent'),
                         value: urgentCount.toString(),
                         color: AppColors.error,
                         isDark: isDark,
@@ -385,7 +397,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
                     Expanded(
                       child: _StatCard(
                         icon: Icons.stars_rounded,
-                        label: 'Almost There',
+                        label: lang.getText('stat_almost_there'),
                         value: almostThereCount.toString(),
                         color: AppColors.warning,
                         isDark: isDark,
@@ -400,7 +412,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
     );
   }
 
-  Widget _buildFilterRow(bool isDark) {
+  Widget _buildFilterRow(bool isDark, LanguageProvider lang) {
     return SliverToBoxAdapter(
       child: Container(
         height: 48,
@@ -410,7 +422,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           children: [
             _FilterPill(
-              label: 'All Campaigns',
+              label: lang.getText('filter_all'),
               icon: Icons.grid_view_rounded,
               isActive: _selectedFilter == 'all',
               onTap: () => _setFilter('all'),
@@ -419,7 +431,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
             ),
             const SizedBox(width: 10),
             _FilterPill(
-              label: 'Needs Help',
+              label: lang.getText('filter_urgent'),
               icon: Icons.warning_rounded,
               isActive: _selectedFilter == 'urgent',
               activeColor: AppColors.error,
@@ -428,7 +440,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
             ),
             const SizedBox(width: 10),
             _FilterPill(
-              label: 'Almost There',
+              label: lang.getText('filter_almost_there'),
               icon: Icons.trending_up_rounded,
               isActive: _selectedFilter == 'almost',
               activeColor: AppColors.warning,
@@ -441,7 +453,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
     );
   }
 
-  Widget _buildContent(bool isDark) {
+  Widget _buildContent(bool isDark, LanguageProvider lang) {
     if (_isLoading) {
       return const SliverFillRemaining(
         child: Center(child: CircularProgressIndicator()),
@@ -449,11 +461,11 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
     }
 
     if (_error != null) {
-      return SliverFillRemaining(child: _buildErrorState());
+      return SliverFillRemaining(child: _buildErrorState(lang));
     }
 
     if (_filteredFundraisers.isEmpty) {
-      return SliverFillRemaining(child: _buildEmptyState());
+      return SliverFillRemaining(child: _buildEmptyState(lang));
     }
 
     return SliverPadding(
@@ -473,7 +485,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(LanguageProvider lang) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -499,7 +511,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
             ).animate().scale(duration: 500.ms, curve: Curves.elasticOut),
             const SizedBox(height: 28),
             Text(
-              'No Fundraisers Found',
+              lang.getText('no_fundraisers'),
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
@@ -509,8 +521,8 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
             const SizedBox(height: 12),
             Text(
               _searchQuery.isNotEmpty || _selectedFilter != 'all'
-                  ? 'Try adjusting your search or filters'
-                  : 'Check back later for new campaigns',
+                  ? lang.getText('adjust_filters_desc')
+                  : lang.getText('check_back_desc'),
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 15,
@@ -530,7 +542,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
                   });
                 },
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Clear Filters'),
+                label: Text(lang.getText('clear_filters')),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.success,
                   textStyle: const TextStyle(fontWeight: FontWeight.w600),
@@ -542,7 +554,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(LanguageProvider lang) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -560,7 +572,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
             ElevatedButton.icon(
               onPressed: _loadFundraisers,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
+              label: Text(lang.getText('retry')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.success,
                 foregroundColor: Colors.white,

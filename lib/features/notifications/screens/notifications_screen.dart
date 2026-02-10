@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/providers/language_provider.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -149,10 +151,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
+
     return Scaffold(
       backgroundColor: context.scaffoldBg,
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(lang.getText('notifications_title')),
         backgroundColor: context.scaffoldBg,
         surfaceTintColor: Colors.transparent,
         actions: [
@@ -160,18 +164,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             TextButton(
               onPressed: _markAllRead,
               style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-              child: const Text('Mark all read'),
+              child: Text(lang.getText('mark_all_read')),
             ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadNotifications,
-        child: _buildBody(),
+        child: _buildBody(lang),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(LanguageProvider lang) {
     // Show permission request if not enabled
     if (!_notificationsEnabled) {
       return Center(
@@ -195,14 +199,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Enable Notifications',
+                lang.getText('enable_notifications_title'),
                 style: Theme.of(
                   context,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
-                'Get notified about blood requests in your area and donation updates.',
+                lang.getText('enable_notifications_desc'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textSecondary),
               ),
@@ -210,7 +214,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ElevatedButton.icon(
                 onPressed: _requestPermissions,
                 icon: const Icon(Icons.notifications_active),
-                label: const Text('Enable Notifications'),
+                label: Text(lang.getText('enable_notifications_btn')),
               ),
             ],
           ),
@@ -233,7 +237,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadNotifications,
-              child: const Text('Retry'),
+              child: Text(lang.getText('retry')),
             ),
           ],
         ),
@@ -252,12 +256,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No notifications yet',
+              lang.getText('no_notifications'),
               style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
             Text(
-              'You\'ll be notified about blood requests\nand donation updates here.',
+              lang.getText('no_notifications_desc'),
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textTertiary),
             ),
@@ -272,7 +276,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       itemBuilder: (context, index) {
         final notif = _notifications[index];
         return _NotificationCard(
-              title: notif['title'] ?? 'Notification',
+              title: notif['title'] ?? lang.getText('notification'),
               body: notif['body'] ?? notif['message'] ?? '',
               type: notif['type'],
               createdAt: notif['created_at'],
@@ -284,6 +288,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               onTap: () {
                 // Handle navigation based on notification data
               },
+              lang: lang,
             )
             .animate(delay: Duration(milliseconds: index * 50))
             .fadeIn(duration: 300.ms)
@@ -304,6 +309,7 @@ class _NotificationCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final LanguageProvider lang;
 
   const _NotificationCard({
     required this.title,
@@ -316,6 +322,7 @@ class _NotificationCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
+    required this.lang,
   });
 
   String _formatTime(String? dateStr) {
@@ -326,11 +333,11 @@ class _NotificationCard extends StatelessWidget {
       final diff = now.difference(date);
 
       if (diff.inMinutes < 60) {
-        return '${diff.inMinutes}m ago';
+        return '${diff.inMinutes}${lang.getText('time_m_ago')}';
       } else if (diff.inHours < 24) {
-        return '${diff.inHours}h ago';
+        return '${diff.inHours}${lang.getText('time_h_ago')}';
       } else if (diff.inDays < 7) {
-        return '${diff.inDays}d ago';
+        return '${diff.inDays}${lang.getText('time_d_ago')}';
       } else {
         return DateFormat('MMM d').format(date);
       }
@@ -441,7 +448,7 @@ class _NotificationCard extends StatelessWidget {
                         side: BorderSide(color: AppColors.border),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: const Text('Dismiss'),
+                      child: Text(lang.getText('dismiss')),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -454,7 +461,7 @@ class _NotificationCard extends StatelessWidget {
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: const Text('View Now'),
+                      child: Text(lang.getText('view_now')),
                     ),
                   ),
                 ],

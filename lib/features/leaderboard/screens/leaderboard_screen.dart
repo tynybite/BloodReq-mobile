@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_theme.dart';
+import '../../../core/providers/language_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../shared/utils/avatar_utils.dart';
 
@@ -70,6 +72,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
+
     return Scaffold(
       backgroundColor: context.scaffoldBg,
       body: CustomScrollView(
@@ -95,9 +99,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         size: 48,
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Top Blood Donors',
-                        style: TextStyle(
+                      Text(
+                        lang.getText('top_donors_title'),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -105,7 +109,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Heroes saving lives',
+                        lang.getText('top_donors_subtitle'),
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 14,
@@ -125,7 +129,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               child: Row(
                 children: [
                   _PeriodChip(
-                    label: 'All Time',
+                    label: lang.getText('period_all_time'),
                     isSelected: _period == 'all_time',
                     onTap: () {
                       setState(() => _period = 'all_time');
@@ -134,7 +138,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   ),
                   const SizedBox(width: 8),
                   _PeriodChip(
-                    label: 'This Month',
+                    label: lang.getText('period_monthly'),
                     isSelected: _period == 'monthly',
                     onTap: () {
                       setState(() => _period = 'monthly');
@@ -143,7 +147,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   ),
                   const SizedBox(width: 8),
                   _PeriodChip(
-                    label: 'This Week',
+                    label: lang.getText('period_weekly'),
                     isSelected: _period == 'weekly',
                     onTap: () {
                       setState(() => _period = 'weekly');
@@ -172,7 +176,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: _loadLeaderboard,
-                      child: const Text('Retry'),
+                      child: Text(lang.getText('retry')),
                     ),
                   ],
                 ),
@@ -191,7 +195,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No donors yet',
+                      lang.getText('no_donors'),
                       style: TextStyle(
                         fontSize: 18,
                         color: AppColors.textSecondary,
@@ -199,7 +203,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Be the first to donate blood!',
+                      lang.getText('be_first_donor'),
                       style: TextStyle(color: AppColors.textTertiary),
                     ),
                   ],

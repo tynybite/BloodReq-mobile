@@ -66,7 +66,7 @@ class FundraiserCard extends StatelessWidget {
                 top: Radius.circular(20),
               ),
               child: Container(
-                height: 140,
+                height: 100,
                 width: double.infinity,
                 color: AppColors.primary.withValues(alpha: 0.1),
                 child: fundraiser['cover_image_url'] != null

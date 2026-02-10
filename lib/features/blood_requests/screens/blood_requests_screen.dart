@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/providers/scroll_control_provider.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/language_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/api_service.dart';
@@ -250,85 +251,89 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 80),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Consumer<LanguageProvider>(
+                builder: (context, lang, _) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                                  'Blood Requests',
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                      lang.getText('blood_requests_title'),
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    )
+                                    .animate()
+                                    .fadeIn(duration: 400.ms)
+                                    .slideX(
+                                      begin: -0.1,
+                                      end: 0,
+                                      curve: Curves.easeOut,
+                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  lang.getText('blood_requests_subtitle'),
                                   style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.5,
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                )
-                                .animate()
-                                .fadeIn(duration: 400.ms)
-                                .slideX(
-                                  begin: -0.1,
-                                  end: 0,
-                                  curve: Curves.easeOut,
-                                ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Find and help patients near you',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ).animate(delay: 100.ms).fadeIn(),
-                          ],
-                        ),
-                      ),
-                      if (criticalCount > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.3),
+                                ).animate(delay: 100.ms).fadeIn(),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                    Icons.bolt_rounded,
-                                    color: Colors.white,
-                                    size: 16,
-                                  )
-                                  .animate(
-                                    onPlay: (c) => c.repeat(reverse: true),
-                                  )
-                                  .fade(duration: 600.ms)
-                                  .scale(begin: const Offset(0.8, 0.8)),
-                              const SizedBox(width: 6),
-                              Text(
-                                '$criticalCount Critical',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
+                          if (criticalCount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.3),
                                 ),
                               ),
-                            ],
-                          ),
-                        ).animate(delay: 200.ms).fadeIn().scale(),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                        Icons.bolt_rounded,
+                                        color: Colors.white,
+                                        size: 16,
+                                      )
+                                      .animate(
+                                        onPlay: (c) => c.repeat(reverse: true),
+                                      )
+                                      .fade(duration: 600.ms)
+                                      .scale(begin: const Offset(0.8, 0.8)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '$criticalCount ${lang.getText('critical_count')}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ).animate(delay: 200.ms).fadeIn().scale(),
+                        ],
+                      ),
                     ],
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ),
@@ -355,49 +360,53 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
             borderRadius: BorderRadius.circular(16),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: TextField(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                onChanged: _onSearchChanged,
-                style: TextStyle(
-                  color: isDark ? Colors.white : AppColors.textPrimary,
-                  fontSize: 15,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Search hospital, location, or name...',
-                  hintStyle: TextStyle(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.5)
-                        : AppColors.textTertiary,
-                    fontSize: 14,
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search_rounded,
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.7)
-                        : AppColors.textSecondary,
-                  ),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(
-                            Icons.close_rounded,
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.7)
-                                : AppColors.textSecondary,
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            _searchController.clear();
-                            _onSearchChanged('');
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                ),
+              child: Consumer<LanguageProvider>(
+                builder: (context, lang, _) {
+                  return TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onChanged: _onSearchChanged,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                      fontSize: 15,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: lang.getText('search_hint'),
+                      hintStyle: TextStyle(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.5)
+                            : AppColors.textTertiary,
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.7)
+                            : AppColors.textSecondary,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.close_rounded,
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.7)
+                                    : AppColors.textSecondary,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -416,47 +425,53 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
     return SliverToBoxAdapter(
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Row(
-          children: [
-            Expanded(
-                  child: _StatCard(
-                    icon: Icons.favorite_rounded,
-                    label: 'Matches',
-                    value: matchCount.toString(),
-                    color: AppColors.primary,
-                    isDark: isDark,
-                  ),
-                )
-                .animate()
-                .fadeIn(delay: 300.ms, duration: 400.ms)
-                .slideY(begin: 0.1, end: 0),
-            const SizedBox(width: 12),
-            Expanded(
-                  child: _StatCard(
-                    icon: Icons.bolt_rounded,
-                    label: 'Critical',
-                    value: criticalCount.toString(),
-                    color: AppColors.urgencyCritical,
-                    isDark: isDark,
-                  ),
-                )
-                .animate()
-                .fadeIn(delay: 400.ms, duration: 400.ms)
-                .slideY(begin: 0.1, end: 0),
-            const SizedBox(width: 12),
-            Expanded(
-                  child: _StatCard(
-                    icon: Icons.access_time_filled_rounded,
-                    label: 'Urgent',
-                    value: urgentCount.toString(),
-                    color: AppColors.urgencyUrgent,
-                    isDark: isDark,
-                  ),
-                )
-                .animate()
-                .fadeIn(delay: 500.ms, duration: 400.ms)
-                .slideY(begin: 0.1, end: 0),
-          ],
+        child: Consumer<LanguageProvider>(
+          builder: (context, lang, _) {
+            return Row(
+              children: [
+                Expanded(
+                      child: _StatCard(
+                        icon: Icons.favorite_rounded,
+                        label: lang.getText(
+                          'matches',
+                        ), // Matches for You is too long here maybe? Or 'matches' generic?
+                        value: matchCount.toString(),
+                        color: AppColors.primary,
+                        isDark: isDark,
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(delay: 300.ms, duration: 400.ms)
+                    .slideY(begin: 0.1, end: 0),
+                const SizedBox(width: 12),
+                Expanded(
+                      child: _StatCard(
+                        icon: Icons.bolt_rounded,
+                        label: lang.getText('urgency_critical'),
+                        value: criticalCount.toString(),
+                        color: AppColors.urgencyCritical,
+                        isDark: isDark,
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(delay: 400.ms, duration: 400.ms)
+                    .slideY(begin: 0.1, end: 0),
+                const SizedBox(width: 12),
+                Expanded(
+                      child: _StatCard(
+                        icon: Icons.access_time_filled_rounded,
+                        label: lang.getText('urgency_urgent'),
+                        value: urgentCount.toString(),
+                        color: AppColors.urgencyUrgent,
+                        isDark: isDark,
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(delay: 500.ms, duration: 400.ms)
+                    .slideY(begin: 0.1, end: 0),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -467,96 +482,103 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
       child: Container(
         height: 48,
         margin: const EdgeInsets.only(top: 8),
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          children: [
-            _FilterPill(
-              label: 'All Requests',
-              icon: Icons.grid_view_rounded,
-              isActive: _selectedUrgency == 'all',
-              onTap: () => _setUrgencyFilter('all'),
-              isDark: isDark,
-            ),
-            const SizedBox(width: 10),
-            _FilterPill(
-              label: 'Critical',
-              icon: Icons.bolt_rounded,
-              isActive: _selectedUrgency == 'critical',
-              activeColor: AppColors.urgencyCritical,
-              onTap: () => _setUrgencyFilter('critical'),
-              isDark: isDark,
-            ),
-            const SizedBox(width: 10),
-            _FilterPill(
-              label: 'Urgent',
-              icon: Icons.access_time_filled_rounded,
-              isActive: _selectedUrgency == 'urgent',
-              activeColor: AppColors.urgencyUrgent,
-              onTap: () => _setUrgencyFilter('urgent'),
-              isDark: isDark,
-            ),
-            const SizedBox(width: 12),
-            Container(
-              width: 1,
-              height: 24,
-              color: isDark
-                  ? Colors.white24
-                  : Colors.grey.withValues(alpha: 0.2),
-            ),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: _showBloodGroupFilter,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
+        child: Consumer<LanguageProvider>(
+          builder: (context, lang, _) {
+            return ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _FilterPill(
+                  label: lang.getText('urgency_all'),
+                  icon: Icons.grid_view_rounded,
+                  isActive: _selectedUrgency == 'all',
+                  onTap: () => _setUrgencyFilter('all'),
+                  isDark: isDark,
                 ),
-                decoration: BoxDecoration(
-                  color: _selectedBloodGroup != null
-                      ? AppColors.primary
-                      : (isDark ? AppColors.surfaceDark : Colors.white),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: _selectedBloodGroup != null
-                        ? Colors.transparent
-                        : AppColors.primary.withValues(alpha: 0.3),
+                const SizedBox(width: 10),
+                _FilterPill(
+                  label: lang.getText('urgency_critical'),
+                  icon: Icons.bolt_rounded,
+                  isActive: _selectedUrgency == 'critical',
+                  activeColor: AppColors.urgencyCritical,
+                  onTap: () => _setUrgencyFilter('critical'),
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 10),
+                _FilterPill(
+                  label: lang.getText('urgency_urgent'),
+                  icon: Icons.access_time_filled_rounded,
+                  isActive: _selectedUrgency == 'urgent',
+                  activeColor: AppColors.urgencyUrgent,
+                  onTap: () => _setUrgencyFilter('urgent'),
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  width: 1,
+                  height: 24,
+                  color: isDark
+                      ? Colors.white24
+                      : Colors.grey.withValues(alpha: 0.2),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: _showBloodGroupFilter,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _selectedBloodGroup != null
+                          ? AppColors.primary
+                          : (isDark ? AppColors.surfaceDark : Colors.white),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: _selectedBloodGroup != null
+                            ? Colors.transparent
+                            : AppColors.primary.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.bloodtype_rounded,
+                          size: 16,
+                          color: _selectedBloodGroup != null
+                              ? Colors.white
+                              : AppColors.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _selectedBloodGroup ??
+                              lang.getText(
+                                'blood_type',
+                              ), // Fix: 'Blood Type' -> 'blood_type' key
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _selectedBloodGroup != null
+                                ? Colors.white
+                                : AppColors.primary,
+                          ),
+                        ),
+                        if (_selectedBloodGroup != null) ...[
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.close_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.bloodtype_rounded,
-                      size: 16,
-                      color: _selectedBloodGroup != null
-                          ? Colors.white
-                          : AppColors.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      _selectedBloodGroup ?? 'Blood Type',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _selectedBloodGroup != null
-                            ? Colors.white
-                            : AppColors.primary,
-                      ),
-                    ),
-                    if (_selectedBloodGroup != null) ...[
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.close_rounded,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
@@ -577,130 +599,151 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
       return SliverFillRemaining(child: _buildEmptyState());
     }
 
-    return SliverList(
-      delegate: SliverChildListDelegate([
-        if (_matchingRequests.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-            child: _SectionTitle(
-              icon: Icons.wb_incandescent_rounded,
-              title: "Matches for You",
-              count: _matchingRequests.length,
-              color: AppColors.primary,
-            ),
-          ),
-          ..._matchingRequests.asMap().entries.map((entry) {
-            final index = entry.key;
-            final req = entry.value;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child:
-                  _PremiumRequestCard(
-                        request: req,
-                        isHighlighted: true,
-                        onTap: () => _openRequestDetail(req),
-                      )
-                      .animate(delay: Duration(milliseconds: index * 100))
-                      .fadeIn(duration: 400.ms)
-                      .slideX(begin: 0.05, end: 0, curve: Curves.easeOut),
-            );
-          }),
-        ],
-        if (_otherRequests.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-            child: _SectionTitle(
-              icon: Icons.list_alt_rounded,
-              title: "Other Requests",
-              count: _otherRequests.length,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          ..._otherRequests.asMap().entries.map((entry) {
-            final index = entry.key;
-            final req = entry.value;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child:
-                  _PremiumRequestCard(
-                        request: req,
-                        isHighlighted: false,
-                        onTap: () => _openRequestDetail(req),
-                      )
-                      .animate(delay: Duration(milliseconds: 200 + index * 80))
-                      .fadeIn(duration: 400.ms)
-                      .slideX(begin: 0.05, end: 0, curve: Curves.easeOut),
-            );
-          }),
-        ],
-      ]),
+    return Consumer<LanguageProvider>(
+      builder: (context, lang, _) {
+        return SliverList(
+          delegate: SliverChildListDelegate([
+            if (_matchingRequests.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                child: _SectionTitle(
+                  icon: Icons.wb_incandescent_rounded,
+                  title: lang.getText('matches_for_you'),
+                  count: _matchingRequests.length,
+                  color: AppColors.primary,
+                ),
+              ),
+              ..._matchingRequests.asMap().entries.map((entry) {
+                final index = entry.key;
+                final req = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child:
+                      _PremiumRequestCard(
+                            request: req,
+                            isHighlighted: true,
+                            onTap: () => _openRequestDetail(req),
+                          )
+                          .animate(delay: Duration(milliseconds: index * 100))
+                          .fadeIn(duration: 400.ms)
+                          .slideX(begin: 0.05, end: 0, curve: Curves.easeOut),
+                );
+              }),
+            ],
+            if (_otherRequests.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                child: _SectionTitle(
+                  icon: Icons.list_alt_rounded,
+                  title: lang.getText('other_requests'),
+                  count: _otherRequests.length,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              ..._otherRequests.asMap().entries.map((entry) {
+                final index = entry.key;
+                final req = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child:
+                      _PremiumRequestCard(
+                            request: req,
+                            isHighlighted: false,
+                            onTap: () => _openRequestDetail(req),
+                          )
+                          .animate(
+                            delay: Duration(milliseconds: 200 + index * 80),
+                          )
+                          .fadeIn(duration: 400.ms)
+                          .slideX(begin: 0.05, end: 0, curve: Curves.easeOut),
+                );
+              }),
+            ],
+          ]),
+        );
+      },
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.bloodtype_outlined,
-              size: 48,
-              color: AppColors.primary,
-            ),
-          ).animate().scale(duration: 400.ms),
-          const SizedBox(height: 16),
-          Text(
-            'No Requests Found',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: context.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Check back later or adjust filters',
-            style: TextStyle(color: AppColors.textSecondary),
-          ),
-          if (_searchQuery.isNotEmpty || _selectedUrgency != 'all')
-            Padding(
-              padding: const EdgeInsets.only(top: 24),
-              child: TextButton(
-                onPressed: () {
-                  setState(() {
-                    _searchQuery = '';
-                    _selectedUrgency = 'all';
-                    _selectedBloodGroup = null;
-                    _searchController.clear();
-                    _applyFilters();
-                  });
-                },
-                child: const Text('Clear Filters'),
+    return Consumer<LanguageProvider>(
+      builder: (context, lang, _) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.bloodtype_outlined,
+                  size: 48,
+                  color: AppColors.primary,
+                ),
+              ).animate().scale(duration: 400.ms),
+              const SizedBox(height: 16),
+              Text(
+                lang.getText('no_requests_found'),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: context.textPrimary,
+                ),
               ),
-            ),
-        ],
-      ),
+              const SizedBox(height: 8),
+              Text(
+                lang.getText('check_back_later'),
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+              if (_searchQuery.isNotEmpty || _selectedUrgency != 'all')
+                Padding(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _searchQuery = '';
+                        _selectedUrgency = 'all';
+                        _selectedBloodGroup = null;
+                        _searchController.clear();
+                        _applyFilters();
+                      });
+                    },
+                    child: Text(lang.getText('clear_filters')),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
-          const SizedBox(height: 16),
-          Text(_error!, style: TextStyle(color: AppColors.textSecondary)),
-          const SizedBox(height: 16),
-          ElevatedButton(onPressed: _loadRequests, child: const Text('Retry')),
-        ],
-      ),
+    return Consumer<LanguageProvider>(
+      builder: (context, lang, _) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: AppColors.error,
+              ),
+              const SizedBox(height: 16),
+              Text(_error!, style: TextStyle(color: AppColors.textSecondary)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadRequests,
+                child: Text(lang.getText('retry')),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -943,256 +986,269 @@ class _PremiumRequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final daysLeft = request.requiredDate.difference(DateTime.now()).inDays;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: isHighlighted
-              ? Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.4),
-                  width: 1.5,
-                )
-              : null,
-          boxShadow: [
-            BoxShadow(
-              color: isHighlighted
-                  ? AppColors.primary.withValues(alpha: 0.12)
-                  : Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
-              blurRadius: isHighlighted ? 20 : 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Main Content
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // Blood Group Badge
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: isHighlighted
-                            ? [AppColors.primary, AppColors.primaryDark]
-                            : [
-                                AppColors.primary.withValues(alpha: 0.15),
-                                AppColors.primary.withValues(alpha: 0.08),
-                              ],
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: isHighlighted
-                          ? [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Center(
-                      child: Text(
-                        request.bloodGroup,
-                        style: TextStyle(
-                          color: isHighlighted
-                              ? Colors.white
-                              : AppColors.primary,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
+    return Consumer<LanguageProvider>(
+      builder: (context, lang, _) {
+        final daysLeft = request.requiredDate.difference(DateTime.now()).inDays;
 
-                  // Info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                request.patientName,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                  color: context.textPrimary,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: urgencyColor.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    urgencyIcon,
-                                    size: 12,
-                                    color: urgencyColor,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    request.urgency.toUpperCase(),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: urgencyColor,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.local_hospital_rounded,
-                              size: 14,
-                              color: AppColors.textTertiary,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                request.hospital,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_rounded,
-                              size: 14,
-                              color: AppColors.textTertiary,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                request.location,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textTertiary,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Footer
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.03)
-                    : Colors.grey.withValues(alpha: 0.04),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
+        return GestureDetector(
+          onTap: onTap,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: isHighlighted
+                  ? Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.4),
+                      width: 1.5,
+                    )
+                  : null,
+              boxShadow: [
+                BoxShadow(
+                  color: isHighlighted
+                      ? AppColors.primary.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+                  blurRadius: isHighlighted ? 20 : 16,
+                  offset: const Offset(0, 6),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today_rounded,
-                    size: 14,
-                    color: daysLeft <= 1
-                        ? AppColors.error
-                        : AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    daysLeft <= 0
-                        ? 'Today'
-                        : daysLeft == 1
-                        ? 'Tomorrow'
-                        : DateFormat('MMM d').format(request.requiredDate),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: daysLeft <= 1
-                          ? AppColors.error
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.water_drop_rounded,
-                          size: 12,
-                          color: AppColors.primary,
+              ],
+            ),
+            child: Column(
+              children: [
+                // Main Content
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      // Blood Group Badge
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: isHighlighted
+                                ? [AppColors.primary, AppColors.primaryDark]
+                                : [
+                                    AppColors.primary.withValues(alpha: 0.15),
+                                    AppColors.primary.withValues(alpha: 0.08),
+                                  ],
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: isHighlighted
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : null,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${request.units} unit${request.units > 1 ? 's' : ''}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
+                        child: Center(
+                          child: Text(
+                            request.bloodGroup,
+                            style: TextStyle(
+                              color: isHighlighted
+                                  ? Colors.white
+                                  : AppColors.primary,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 20,
+                            ),
                           ),
                         ),
-                      ],
+                      ),
+                      const SizedBox(width: 14),
+
+                      // Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    request.patientName,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                      color: context.textPrimary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: urgencyColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        urgencyIcon,
+                                        size: 12,
+                                        color: urgencyColor,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        request.urgency.toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: urgencyColor,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.local_hospital_rounded,
+                                  size: 14,
+                                  color: AppColors.textTertiary,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    request.hospital,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on_rounded,
+                                  size: 14,
+                                  color: AppColors.textTertiary,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    request.location,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textTertiary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Footer
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.03)
+                        : Colors.grey.withValues(alpha: 0.04),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 14,
-                    color: AppColors.textTertiary,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 14,
+                        color: daysLeft <= 1
+                            ? AppColors.error
+                            : AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        daysLeft <= 0
+                            ? 'Today'
+                            : daysLeft == 1
+                            ? 'Tomorrow'
+                            : DateFormat(
+                                'MMM d',
+                                lang.currentLocale.languageCode,
+                              ).format(request.requiredDate),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: daysLeft <= 1
+                              ? AppColors.error
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.water_drop_rounded,
+                              size: 12,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${request.units} ${request.units > 1 ? lang.getText('units') : lang.getText('unit')}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: AppColors.textTertiary,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1219,71 +1275,79 @@ class _BloodTypeBottomSheet extends StatelessWidget {
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Filter by Blood Type',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: context.textPrimary,
+      child: Consumer<LanguageProvider>(
+        builder: (context, lang, _) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        lang.getText('filter_title'),
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: context.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        lang.getText('filter_subtitle'),
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 4,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 1.2,
+                            ),
+                        itemCount: AppConstants.bloodGroups.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return _BloodTypeButton(
+                              label: lang.getText('all'),
+                              isSelected: selectedBloodGroup == null,
+                              onTap: () => onSelect(null),
+                            );
+                          }
+                          final group = AppConstants.bloodGroups[index - 1];
+                          return _BloodTypeButton(
+                            label: group,
+                            isSelected: selectedBloodGroup == group,
+                            onTap: () => onSelect(group),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Select a blood type to filter requests',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.2,
-                  ),
-                  itemCount: AppConstants.bloodGroups.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return _BloodTypeButton(
-                        label: 'All',
-                        isSelected: selectedBloodGroup == null,
-                        onTap: () => onSelect(null),
-                      );
-                    }
-                    final group = AppConstants.bloodGroups[index - 1];
-                    return _BloodTypeButton(
-                      label: group,
-                      isSelected: selectedBloodGroup == group,
-                      onTap: () => onSelect(group),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
-        ],
+              ),
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
+            ],
+          );
+        },
       ),
     );
   }

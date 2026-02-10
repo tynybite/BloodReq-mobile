@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/language_provider.dart';
 import '../../../shared/utils/app_toast.dart';
 import '../../../shared/utils/avatar_utils.dart';
 
@@ -51,6 +52,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _pickImage() async {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     try {
       showModalBottomSheet(
         context: context,
@@ -59,7 +61,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             children: [
               ListTile(
                 leading: const Icon(Icons.photo_library),
-                title: const Text('Gallery'),
+                title: Text(lang.getText('gallery')),
                 onTap: () async {
                   Navigator.pop(ctx);
                   final picked = await _picker.pickImage(
@@ -75,7 +77,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt),
-                title: const Text('Camera'),
+                title: Text(lang.getText('camera')),
                 onTap: () async {
                   Navigator.pop(ctx);
                   final picked = await _picker.pickImage(
@@ -94,11 +96,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       );
     } catch (e) {
-      if (mounted) AppToast.error(context, 'Failed to pick image');
+      if (mounted) {
+        AppToast.error(context, lang.getText('pick_image_failed'));
+      }
     }
   }
 
   Future<void> _handleSave() async {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -139,7 +144,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         debugPrint('Error processing image: $e');
         setState(() => _isLoading = false);
         if (mounted) {
-          AppToast.error(context, 'Failed to process profile photo');
+          AppToast.error(context, lang.getText('process_photo_failed'));
         }
         return;
       }
@@ -164,20 +169,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isLoading = false);
 
     if (success && mounted) {
-      AppToast.success(context, 'Profile updated successfully');
+      AppToast.success(context, lang.getText('profile_updated'));
       context.pop();
     } else if (mounted) {
       debugPrint('❌ Profile update failed: ${authProvider.error}');
-      AppToast.error(context, authProvider.error ?? 'Failed to update profile');
+      AppToast.error(
+        context,
+        authProvider.error ?? lang.getText('profile_update_failed'),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
+
     return Scaffold(
       backgroundColor: context.scaffoldBg,
       appBar: AppBar(
-        title: const Text('Edit Profile'),
+        title: Text(lang.getText('edit_profile')),
         backgroundColor: context.scaffoldBg,
         surfaceTintColor: Colors.transparent,
         actions: [
@@ -189,7 +199,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Save'),
+                : Text(lang.getText('save')),
           ),
         ],
       ),
@@ -250,11 +260,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             // Name Field
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Full Name',
-                prefixIcon: Icon(Icons.person_outline),
+              decoration: InputDecoration(
+                labelText: lang.getText('full_name'),
+                prefixIcon: const Icon(Icons.person_outline),
               ),
-              validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              validator: (v) =>
+                  v?.isEmpty ?? true ? lang.getText('required') : null,
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 16),
@@ -263,16 +274,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Phone Number',
-                prefixIcon: Icon(Icons.phone_outlined),
+              decoration: InputDecoration(
+                labelText: lang.getText('phone_number'),
+                prefixIcon: const Icon(Icons.phone_outlined),
               ),
             ),
             const SizedBox(height: 24),
 
             // Blood Group Selection
             Text(
-              'Blood Group',
+              lang.getText('blood_group'),
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary,
@@ -360,14 +371,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Available to Donate',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                        Text(
+                          lang.getText('available_to_donate'),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         Text(
                           _isAvailable
-                              ? 'You will appear in donor searches'
-                              : 'You won\'t appear in donor searches',
+                              ? lang.getText('available_desc_true')
+                              : lang.getText('available_desc_false'),
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
@@ -409,7 +420,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Danger Zone',
+                        lang.getText('danger_zone'),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -420,7 +431,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Deleting your account is permanent and cannot be undone. All your data will be lost.',
+                    lang.getText('delete_account_desc'),
                     style: TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
@@ -432,7 +443,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _showDeleteConfirmation,
                       icon: const Icon(Icons.delete_forever),
-                      label: const Text('Delete Account'),
+                      label: Text(lang.getText('delete_account')),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.error,
                         side: BorderSide(color: AppColors.error),
@@ -452,6 +463,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showDeleteConfirmation() {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -459,32 +471,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.error),
             const SizedBox(width: 12),
-            const Text('Delete Account'),
+            Text(lang.getText('delete_account')),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Are you sure you want to delete your account?',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              lang.getText('delete_account_confirm_title'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-            SizedBox(height: 12),
-            Text(
-              'This action is permanent and cannot be undone. You will lose:',
-            ),
-            SizedBox(height: 8),
-            Text('• All your profile information'),
-            Text('• Your donation history'),
-            Text('• Your blood request history'),
-            Text('• All earned points and badges'),
+            const SizedBox(height: 12),
+            Text(lang.getText('delete_account_confirm_desc')),
+            const SizedBox(height: 8),
+            const Text('• All your profile information'),
+            const Text('• Your donation history'),
+            const Text('• Your blood request history'),
+            const Text('• All earned points and badges'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(lang.getText('cancel')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -495,7 +505,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Delete Forever'),
+            child: Text(lang.getText('delete_forever')),
           ),
         ],
       ),
@@ -503,6 +513,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _deleteAccount() async {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     setState(() => _isLoading = true);
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -511,10 +522,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isLoading = false);
 
     if (success && mounted) {
-      AppToast.success(context, 'Account deleted successfully');
+      AppToast.success(context, lang.getText('account_deleted'));
       context.go('/login');
     } else if (mounted) {
-      AppToast.error(context, authProvider.error ?? 'Failed to delete account');
+      AppToast.error(
+        context,
+        authProvider.error ?? lang.getText('delete_failed'),
+      );
     }
   }
 
