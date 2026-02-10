@@ -1,0 +1,154 @@
+name: quality-gate
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: quality-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-projects:
+    runs-on: ubuntu-latest
+    outputs:
+      has_flutter: ${{ steps.detect.outputs.has_flutter }}
+      has_nextjs: ${{ steps.detect.outputs.has_nextjs }}
+      nextjs_dir: ${{ steps.detect.outputs.nextjs_dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: detect
+        shell: bash
+        run: |
+          has_flutter=false
+          has_nextjs=false
+          nextjs_dir=""
+
+          if [[ -f "pubspec.yaml" ]]; then
+            has_flutter=true
+          fi
+
+          for candidate in "." "web" "nextjs" "frontend"; do
+            pkg="$candidate/package.json"
+            if [[ "$candidate" == "." ]]; then
+              pkg="package.json"
+            fi
+
+            if [[ -f "$pkg" ]] && grep -q "\"next\"" "$pkg"; then
+              has_nextjs=true
+              if [[ "$candidate" == "." ]]; then
+                nextjs_dir="."
+              else
+                nextjs_dir="$candidate"
+              fi
+              break
+            fi
+          done
+
+          echo "has_flutter=$has_flutter" >> "$GITHUB_OUTPUT"
+          echo "has_nextjs=$has_nextjs" >> "$GITHUB_OUTPUT"
+          echo "nextjs_dir=$nextjs_dir" >> "$GITHUB_OUTPUT"
+
+  dependency-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  flutter-checks:
+    runs-on: ubuntu-latest
+    needs: detect-projects
+    if: needs.detect-projects.outputs.has_flutter == 'true'
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Format check
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Static analysis
+        run: flutter analyze
+
+      - name: Unit tests
+        run: flutter test --no-pub
+
+      - name: Build debug APK
+        run: flutter build apk --debug --no-pub
+
+      - name: Vulnerability scan (HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          vuln-type: library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  nextjs-checks:
+    runs-on: ubuntu-latest
+    needs: detect-projects
+    if: needs.detect-projects.outputs.has_nextjs == 'true'
+    defaults:
+      run:
+        working-directory: ${{ needs.detect-projects.outputs.nextjs_dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          if [[ -f package-lock.json ]]; then
+            npm ci
+          elif [[ -f npm-shrinkwrap.json ]]; then
+            npm ci
+          elif [[ -f yarn.lock ]]; then
+            corepack enable
+            yarn install --frozen-lockfile
+          elif [[ -f pnpm-lock.yaml ]]; then
+            corepack enable
+            pnpm install --frozen-lockfile
+          else
+            npm install
+          fi
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test
+        run: npm test --if-present
+
+      - name: Build
+        run: npm run build --if-present
+
+      - name: Dependency vulnerabilities (npm audit)
+        run: npm audit --audit-level=high

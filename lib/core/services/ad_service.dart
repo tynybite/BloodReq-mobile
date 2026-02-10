@@ -10,51 +10,78 @@ class AdService {
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
-  // Use the ID found in the file as the base for testing if available, or a placeholder
-  // The user had: 2312433698835503_2964944866917713
-  static const String _testPlacementId = '2312433698835503_2964944866917713';
+  // Meta/FAN sample test placements from the plugin example.
+  static const String _debugBannerPlacementId =
+      'IMG_16_9_APP_INSTALL#2312433698835503_2964944860251047';
+  static const String _debugNativePlacementId =
+      'IMG_16_9_APP_INSTALL#2312433698835503_2964952163583650';
+  static const String _debugInterstitialPlacementId =
+      'IMG_16_9_APP_INSTALL#2312433698835503_2650502525028617';
 
-  static const String _bannerPlacementId =
-      'IMG_16_9_APP_INSTALL#$_testPlacementId';
-  static const String _nativeBannerPlacementId =
-      'IMG_16_9_APP_INSTALL#$_testPlacementId';
-  static const String _interstitialPlacementId =
-      'IMG_16_9_APP_INSTALL#$_testPlacementId';
+  // Production placements should be injected with --dart-define.
+  static const String _bannerPlacementId = String.fromEnvironment(
+    'FAN_BANNER_PLACEMENT_ID',
+    defaultValue: '',
+  );
+  static const String _nativePlacementId = String.fromEnvironment(
+    'FAN_NATIVE_PLACEMENT_ID',
+    defaultValue: '',
+  );
+  static const String _interstitialPlacementId = String.fromEnvironment(
+    'FAN_INTERSTITIAL_PLACEMENT_ID',
+    defaultValue: '',
+  );
+  static const String _testingDeviceId = String.fromEnvironment(
+    'FAN_TESTING_DEVICE_ID',
+    defaultValue: '',
+  );
 
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
-      await FacebookAudienceNetwork.init(
-        testingId: '58a05d9e-bea7-4382-8c2a-a757fa2ea878', // Device Hash
-      );
+      if (kDebugMode && _testingDeviceId.isNotEmpty) {
+        await FacebookAudienceNetwork.init(testingId: _testingDeviceId);
+      } else {
+        await FacebookAudienceNetwork.init();
+      }
       _isInitialized = true;
       debugPrint('Facebook Audience Network initialized successfully');
+      if (kDebugMode && _testingDeviceId.isEmpty) {
+        debugPrint(
+          'FAN_TESTING_DEVICE_ID is not set. Read logcat for the device hash and pass it via --dart-define.',
+        );
+      }
     } catch (e) {
       debugPrint('Failed to initialize Facebook Audience Network: $e');
     }
   }
 
   String getBannerPlacementId() {
-    // For testing, we use the specific test ID
     if (kDebugMode) {
-      return 'IMG_16_9_APP_INSTALL#$_testPlacementId';
+      return _debugBannerPlacementId;
     }
-    return _bannerPlacementId;
+    return _bannerPlacementId.isNotEmpty
+        ? _bannerPlacementId
+        : _debugBannerPlacementId;
   }
 
   String getNativeBannerPlacementId() {
     if (kDebugMode) {
-      return 'IMG_16_9_APP_INSTALL#$_testPlacementId';
+      return _debugNativePlacementId;
     }
-    return _nativeBannerPlacementId;
+    return _nativePlacementId.isNotEmpty
+        ? _nativePlacementId
+        : _debugNativePlacementId;
   }
 
   String getInterstitialPlacementId() {
     if (kDebugMode) {
-      return 'IMG_16_9_APP_INSTALL#$_testPlacementId';
+      return _debugInterstitialPlacementId;
     }
-    return _interstitialPlacementId;
+    return _interstitialPlacementId.isNotEmpty
+        ? _interstitialPlacementId
+        : _debugInterstitialPlacementId;
   }
 
   Future<bool> showInterstitialAd() async {
