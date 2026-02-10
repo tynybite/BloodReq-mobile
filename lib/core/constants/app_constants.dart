@@ -76,6 +76,11 @@ class ApiEndpoints {
   // Config Endpoints
   static const String config = '/config';
 
+  // Support Ticket Endpoints
+  static const String supportTickets = '/support/tickets';
+  static String supportTicketDetail(String id) => '/support/tickets/$id';
+  static String supportTicketReply(String id) => '/support/tickets/$id/reply';
+
   // Upload Endpoints
   static const String uploadImage = '/upload/image';
   static const String uploadDocument = '/upload/document';

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
@@ -272,7 +271,7 @@ class ProfileScreen extends StatelessWidget {
           _PremiumMenuItem(
             icon: Icons.help_outline_rounded,
             title: lang.getText('help_center'),
-            onTap: () => launchUrl(Uri.parse('https://bloodreq.com/help')),
+            onTap: () => context.push('/support'),
             isDark: isDark,
             delay: 750,
           ),

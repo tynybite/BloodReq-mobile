@@ -27,6 +27,9 @@ import '../../features/settings/screens/settings_screen.dart';
 import '../../features/verification/screens/verification_screen.dart';
 import '../../features/legal/screens/terms_of_service_screen.dart';
 import '../../features/legal/screens/privacy_policy_screen.dart';
+import '../../features/support/screens/support_home_screen.dart';
+import '../../features/support/screens/create_ticket_screen.dart';
+import '../../features/support/screens/ticket_chat_screen.dart';
 
 class RouterService {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -157,6 +160,21 @@ class RouterService {
       GoRoute(
         path: '/privacy-policy',
         builder: (context, state) => const PrivacyPolicyScreen(),
+      ),
+      GoRoute(
+        path: '/support',
+        builder: (context, state) => const SupportHomeScreen(),
+      ),
+      GoRoute(
+        path: '/support/create',
+        builder: (context, state) => const CreateTicketScreen(),
+      ),
+      GoRoute(
+        path: '/support/chat/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return TicketChatScreen(ticketId: id);
+        },
       ),
       GoRoute(
         path: '/edit-profile',

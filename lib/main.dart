@@ -17,6 +17,7 @@ import 'core/providers/auth_provider.dart';
 import 'core/services/router_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/ad_service.dart';
+import 'core/providers/support_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +55,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ScrollControlProvider()),
+        ChangeNotifierProvider(create: (_) => SupportProvider()),
         ChangeNotifierProvider.value(value: syncService),
         ChangeNotifierProvider.value(value: languageProvider),
       ],
