@@ -91,6 +91,35 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  UserModel? _parseUserSafely(dynamic rawUserData) {
+    if (rawUserData is! Map) return null;
+
+    final userData = Map<String, dynamic>.from(rawUserData);
+    final dynamic rawId = userData['id'];
+    if (rawId == null) return null;
+
+    userData['id'] = rawId.toString();
+
+    try {
+      return UserModel.fromJson(userData);
+    } catch (e) {
+      debugPrint('Error parsing user payload: $e');
+      return null;
+    }
+  }
+
+  Future<void> _hydrateUserFromAuthPayload(Map<String, dynamic> data) async {
+    final fallbackUser =
+        _parseUserSafely(data['user']) ?? _parseUserSafely(data);
+
+    if (fallbackUser != null) {
+      _user = fallbackUser;
+    }
+
+    await _loadUserProfile();
+    _user ??= fallbackUser;
+  }
+
   /// Sign in with email and password
   Future<bool> signInWithEmail(String email, String password) async {
     _status = AuthStatus.loading;
@@ -120,24 +149,14 @@ class AuthProvider with ChangeNotifier {
 
       if (response.success && response.data != null) {
         final data = response.data as Map<String, dynamic>;
-        // Backend returns 'access_token' which IS the idToken (or session cookie logic)
-        // Usually we save what the backend gives us.
+
         await _api.saveTokens(
           data['access_token'] ?? idToken,
           data['refresh_token'] ?? 'FIREBASE_MANAGED',
         );
 
-        if (data['user'] != null) {
-          _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
-        } else {
-          // If the backend response structure is flat (it is in signin/route.ts), map directly
-          // route.ts returns successResponse({...profile fields...})
-          // It does NOT nest it in 'user'. It returns flat fields + access_token.
-          // Let's check route.ts again. Line 61: return successResponse({ access_token, ...profile fields... })
-
-          // So the data IS the user profile (minus token fields)
-          _user = UserModel.fromJson(data);
-        }
+        // Always hydrate from /profile so UI has complete profile fields after login.
+        await _hydrateUserFromAuthPayload(data);
 
         _status = AuthStatus.authenticated;
 
@@ -245,12 +264,7 @@ class AuthProvider with ChangeNotifier {
       if (response.success && response.data != null) {
         final data = response.data as Map<String, dynamic>;
         await _api.saveTokens(data['access_token'], data['refresh_token']);
-
-        if (data['user'] != null) {
-          _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
-        } else {
-          await _loadUserProfile();
-        }
+        await _hydrateUserFromAuthPayload(data);
 
         _status = AuthStatus.authenticated;
         _setupNotifications();
