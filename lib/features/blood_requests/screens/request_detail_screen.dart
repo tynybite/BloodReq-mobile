@@ -6,8 +6,10 @@ import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/sync_service.dart';
 import '../../../shared/utils/app_toast.dart';
 import '../../../core/providers/language_provider.dart';
+import '../../../shared/widgets/offline_drop_screen.dart';
 
 class RequestDetailScreen extends StatefulWidget {
   final String requestId;
@@ -24,33 +26,157 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   Map<String, dynamic>? _request;
   bool _isLoading = true;
   String? _error;
+  bool _showOfflineScreen = false;
   bool _offering = false;
   String? _distance;
 
   @override
   void initState() {
     super.initState();
-    _loadRequest();
+    _loadCachedRequest();
+    _loadRequest(showLoader: _request == null);
   }
 
-  Future<void> _loadRequest() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  void _loadCachedRequest() {
+    final syncService = Provider.of<SyncService>(context, listen: false);
+    final cached = syncService.getCachedRequests();
+    Map<String, dynamic>? cachedRequest;
 
-    final response = await _api.get<Map<String, dynamic>>(
-      '/blood-requests/${widget.requestId}',
-    );
-
-    if (response.success && response.data != null) {
-      setState(() => _request = response.data as Map<String, dynamic>);
-      _calculateDistance();
-    } else {
-      setState(() => _error = response.message ?? 'Failed to load request');
+    for (final request in cached) {
+      if (request.id == widget.requestId) {
+        cachedRequest = _normalizeRequestMap(request.toJson());
+        break;
+      }
     }
 
-    setState(() => _isLoading = false);
+    if (cachedRequest == null) return;
+
+    setState(() {
+      _request = cachedRequest;
+      _error = null;
+      _showOfflineScreen = false;
+      _isLoading = false;
+    });
+    _calculateDistance();
+  }
+
+  Future<void> _loadRequest({bool showLoader = true}) async {
+    if (!mounted) return;
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+
+    setState(() {
+      _isLoading = showLoader;
+      _error = null;
+      _showOfflineScreen = false;
+    });
+
+    final response = await _api.get<dynamic>(
+      '/blood-requests/${widget.requestId}',
+    );
+    if (!mounted) return;
+
+    if (response.success && response.data != null) {
+      final requestData = _extractRequestMap(response.data);
+      if (requestData != null) {
+        setState(() {
+          _request = requestData;
+          _error = null;
+          _showOfflineScreen = false;
+        });
+        _calculateDistance();
+      } else {
+        _loadCachedRequest();
+        if (_request == null) {
+          setState(() => _error = lang.getText('check_back_later'));
+        }
+      }
+    } else {
+      _loadCachedRequest();
+      if (_request == null) {
+        final isNetworkError = _isLikelyNoInternet(
+          response.message,
+          response.statusCode,
+        );
+        setState(() {
+          _showOfflineScreen = isNetworkError;
+          _error = isNetworkError ? null : lang.getText('check_back_later');
+        });
+      }
+    }
+
+    if (mounted && showLoader) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Map<String, dynamic>? _extractRequestMap(dynamic data) {
+    if (data is! Map<String, dynamic>) return null;
+
+    final wrapped = data['request'] ?? data['data'] ?? data;
+    if (wrapped is! Map) return null;
+
+    return _normalizeRequestMap(Map<String, dynamic>.from(wrapped));
+  }
+
+  Map<String, dynamic> _normalizeRequestMap(Map<String, dynamic> raw) {
+    final locationData = raw['location'] is Map
+        ? Map<String, dynamic>.from(raw['location'] as Map)
+        : <String, dynamic>{};
+    final locationText = raw['location'] is String ? raw['location'] : null;
+
+    return {
+      ...raw,
+      'patient_name': _asString(raw['patient_name'] ?? raw['patientName']),
+      'blood_group': _asString(raw['blood_group'] ?? raw['bloodGroup']),
+      'hospital': _asString(raw['hospital'] ?? raw['hospital_name']),
+      'city': _asString(
+        raw['city'] ??
+            raw['address'] ??
+            locationData['address'] ??
+            locationText,
+      ),
+      'contact_number': _asString(
+        raw['contact_number'] ?? raw['contactNumber'],
+      ),
+      'units': _asInt(raw['units'], fallback: 1),
+      'urgency': _asString(raw['urgency'], fallback: 'planned'),
+      'latitude': _asDouble(raw['latitude'] ?? locationData['latitude']),
+      'longitude': _asDouble(raw['longitude'] ?? locationData['longitude']),
+      'notes': _asString(raw['notes'] ?? raw['admin_notes']),
+      'donor_count': _asInt(raw['donor_count']),
+    };
+  }
+
+  String _asString(dynamic value, {String fallback = ''}) {
+    if (value == null) return fallback;
+    final text = value.toString().trim();
+    return text.isEmpty ? fallback : text;
+  }
+
+  int _asInt(dynamic value, {int fallback = 0}) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  double? _asDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '');
+  }
+
+  bool _isLikelyNoInternet(String? message, int statusCode) {
+    if (statusCode == 408) return true;
+    if (message == null) return false;
+
+    final lower = message.toLowerCase();
+    return lower.contains('socketexception') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('no address associated with hostname') ||
+        lower.contains('network is unreachable') ||
+        lower.contains('connection refused') ||
+        lower.contains('connection reset') ||
+        lower.contains('timed out');
   }
 
   Future<void> _calculateDistance() async {
@@ -124,6 +250,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   Widget build(BuildContext context) {
     return Consumer<LanguageProvider>(
       builder: (context, lang, _) {
+        if (_showOfflineScreen) {
+          return OfflineDropScreen(onRetry: () => _loadRequest());
+        }
+
         return Scaffold(
           backgroundColor: context.scaffoldBg,
           appBar: AppBar(

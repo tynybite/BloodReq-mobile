@@ -12,7 +12,9 @@ import '../../../core/providers/language_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/sync_service.dart';
 import '../../../core/models/blood_request.dart';
+import '../../../shared/widgets/offline_drop_screen.dart';
 
 class BloodRequestsScreen extends StatefulWidget {
   const BloodRequestsScreen({super.key});
@@ -28,6 +30,7 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
 
   bool _isLoading = true;
   String? _error;
+  bool _showOfflineScreen = false;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
@@ -50,66 +53,116 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
   }
 
   Future<void> _initData() async {
-    _refreshFromCache();
+    _loadCachedRequests();
+    await _loadRequests(showLoader: _requests.isEmpty);
   }
 
-  void _refreshFromCache() {
-    // Implement cache logic if needed
-    _loadRequests();
-  }
+  void _loadCachedRequests() {
+    final syncService = Provider.of<SyncService>(context, listen: false);
+    final cachedRequests = syncService.getCachedRequests();
+    if (cachedRequests.isEmpty) return;
 
-  Future<void> _loadRequests() async {
-    if (!mounted) return;
+    final preparedRequests = _prepareRequests(cachedRequests);
     setState(() {
-      _isLoading = true;
+      _requests = preparedRequests;
       _error = null;
+      _showOfflineScreen = false;
+      _isLoading = false;
+      _applyFilters();
+    });
+  }
+
+  Future<void> _loadRequests({bool showLoader = true}) async {
+    if (!mounted) return;
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
+
+    setState(() {
+      _isLoading = showLoader;
+      _error = null;
+      _showOfflineScreen = false;
     });
 
-    try {
-      final api = ApiService();
-      // Fetch 'active' generally, or filter by status=approved on backend
-      final response = await api.get('/blood-requests');
+    final api = ApiService();
+    // Fetch 'active' generally, or filter by status=approved on backend
+    final response = await api.get<dynamic>('/blood-requests');
+    if (!mounted) return;
 
+    if (response.success && response.data != null) {
+      final requestList = _extractRequestList(response.data);
+      final allRequests = requestList
+          .whereType<Map>()
+          .map((json) => BloodRequest.fromJson(Map<String, dynamic>.from(json)))
+          .toList();
+
+      final preparedRequests = _prepareRequests(allRequests);
+
+      setState(() {
+        _requests = preparedRequests;
+        _error = null;
+        _showOfflineScreen = false;
+        _applyFilters();
+      });
+    } else {
+      _loadCachedRequests();
       if (!mounted) return;
 
-      if (response.success && response.data != null) {
-        final List<dynamic> data = response.data['requests'] ?? [];
-        final allRequests = data
-            .map((json) => BloodRequest.fromJson(json))
-            .toList();
-
-        // Filter valid requests (future date)
-        final validRequests = allRequests.where((r) {
-          final isFuture = r.requiredDate.isAfter(
-            DateTime.now().subtract(const Duration(days: 1)),
-          );
-          // Only show approved/urgent/critical if needed, but assuming API returns valid ones
-          return isFuture;
-        }).toList();
-
-        // Sort by urgency then date
-        validRequests.sort((a, b) {
-          final urgencyOrder = {'critical': 0, 'urgent': 1, 'standard': 2};
-          final ua = urgencyOrder[a.urgency] ?? 2;
-          final ub = urgencyOrder[b.urgency] ?? 2;
-          if (ua != ub) return ua.compareTo(ub);
-          return a.requiredDate.compareTo(b.requiredDate);
+      if (_requests.isEmpty) {
+        final isNetworkError = _isLikelyNoInternet(
+          response.message,
+          response.statusCode,
+        );
+        setState(() {
+          _showOfflineScreen = isNetworkError;
+          _error = isNetworkError ? null : lang.getText('check_back_later');
         });
-
-        if (mounted) {
-          setState(() {
-            _requests = validRequests;
-            _applyFilters();
-          });
-        }
-      } else {
-        if (mounted) setState(() => _error = response.message);
       }
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Failed to load requests');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
+
+    if (mounted && showLoader) setState(() => _isLoading = false);
+  }
+
+  List<dynamic> _extractRequestList(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      final nested = data['requests'] ?? data['data'];
+      return nested is List ? nested : [];
+    }
+    if (data is List) {
+      return data;
+    }
+    return [];
+  }
+
+  List<BloodRequest> _prepareRequests(List<BloodRequest> requests) {
+    final validRequests = requests.where((r) {
+      final isFuture = r.requiredDate.isAfter(
+        DateTime.now().subtract(const Duration(days: 1)),
+      );
+      return isFuture;
+    }).toList();
+
+    validRequests.sort((a, b) {
+      final urgencyOrder = {'critical': 0, 'urgent': 1, 'standard': 2};
+      final ua = urgencyOrder[a.urgency] ?? 2;
+      final ub = urgencyOrder[b.urgency] ?? 2;
+      if (ua != ub) return ua.compareTo(ub);
+      return a.requiredDate.compareTo(b.requiredDate);
+    });
+
+    return validRequests;
+  }
+
+  bool _isLikelyNoInternet(String? message, int statusCode) {
+    if (statusCode == 408) return true;
+    if (message == null) return false;
+
+    final lower = message.toLowerCase();
+    return lower.contains('socketexception') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('no address associated with hostname') ||
+        lower.contains('network is unreachable') ||
+        lower.contains('connection refused') ||
+        lower.contains('connection reset') ||
+        lower.contains('timed out');
   }
 
   void _applyFilters() {
@@ -183,6 +236,10 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_showOfflineScreen) {
+      return OfflineDropScreen(onRetry: () => _loadRequests());
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(

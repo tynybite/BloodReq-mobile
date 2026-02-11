@@ -9,6 +9,7 @@ import '../../../core/providers/scroll_control_provider.dart';
 import '../../../core/providers/language_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/fundraiser_cache_service.dart';
 
 class FundraisersScreen extends StatefulWidget {
   const FundraisersScreen({super.key});
@@ -19,6 +20,7 @@ class FundraisersScreen extends StatefulWidget {
 
 class _FundraisersScreenState extends State<FundraisersScreen> {
   final ApiService _api = ApiService();
+  final FundraiserCacheService _cache = FundraiserCacheService();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -48,34 +50,54 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
       _error = null;
     });
 
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     final response = await _api.get<dynamic>('/fundraisers');
     if (!mounted) return;
-    final lang = Provider.of<LanguageProvider>(context, listen: false);
 
     if (response.success && response.data != null) {
-      List<dynamic> fundList;
-
-      if (response.data is List) {
-        fundList = response.data as List;
-      } else if (response.data is Map) {
-        final mapData = response.data as Map<String, dynamic>;
-        fundList = (mapData['data'] ?? mapData['fundraisers'] ?? []) as List;
-      } else {
-        fundList = [];
-      }
+      final parsedFundraisers = _parseFundraisers(response.data);
+      await _cache.saveFundraisers(parsedFundraisers);
+      if (!mounted) return;
 
       setState(() {
-        _fundraisers = fundList.map((e) => e as Map<String, dynamic>).toList();
+        _fundraisers = parsedFundraisers;
+        _error = null;
         _applyFilters();
       });
     } else {
-      setState(
-        () => _error =
-            response.message ?? lang.getText('load_fundraisers_failed'),
-      );
+      final cachedFundraisers = await _cache.getFundraisers();
+      if (!mounted) return;
+
+      if (cachedFundraisers.isNotEmpty) {
+        setState(() {
+          _fundraisers = cachedFundraisers;
+          _error = null;
+          _applyFilters();
+        });
+      } else {
+        setState(() => _error = lang.getText('load_fundraisers_failed'));
+      }
     }
 
     setState(() => _isLoading = false);
+  }
+
+  List<Map<String, dynamic>> _parseFundraisers(dynamic data) {
+    List<dynamic> fundList;
+
+    if (data is List) {
+      fundList = data;
+    } else if (data is Map<String, dynamic>) {
+      final rawList = data['data'] ?? data['fundraisers'];
+      fundList = rawList is List ? rawList : [];
+    } else {
+      fundList = [];
+    }
+
+    return fundList
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
   }
 
   void _applyFilters() {
