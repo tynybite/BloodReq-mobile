@@ -27,6 +27,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   String _selectedBloodGroup = 'O+';
+  String _selectedGender = 'Male';
   bool _isAvailable = true;
   bool _isLoading = false;
 
@@ -40,6 +41,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController = TextEditingController(text: user?.fullName ?? '');
     _phoneController = TextEditingController(text: user?.phoneNumber ?? '');
     _selectedBloodGroup = user?.bloodGroup ?? 'O+';
+    _selectedGender = user?.gender ?? 'Male';
     _isAvailable = user?.isAvailableToDonate ?? true;
     _currentAvatarUrl = user?.avatarUrl;
   }
@@ -160,6 +162,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       'full_name': _nameController.text.trim(),
       'phone_number': _phoneController.text.trim(),
       'blood_group': _selectedBloodGroup,
+      'gender': _selectedGender,
       'is_available_to_donate': _isAvailable,
       'avatar_url': newAvatarUrl,
     });
@@ -278,6 +281,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 labelText: lang.getText('phone_number'),
                 prefixIcon: const Icon(Icons.phone_outlined),
               ),
+            ),
+            const SizedBox(height: 16),
+
+            // Gender Field
+            DropdownButtonFormField<String>(
+              value: _selectedGender,
+              decoration: InputDecoration(
+                labelText:
+                    lang.getText('gender') ??
+                    'Gender', // Fallback if key missing
+                prefixIcon: const Icon(Icons.wc),
+              ),
+              items: [
+                'Male',
+                'Female',
+                'Other',
+              ].map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+              onChanged: (v) => setState(() => _selectedGender = v ?? 'Male'),
             ),
             const SizedBox(height: 24),
 

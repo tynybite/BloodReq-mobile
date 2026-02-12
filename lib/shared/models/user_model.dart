@@ -19,6 +19,7 @@ class UserModel {
   final DateTime createdAt;
   final DateTime? lastDonationAt;
   final String? emergencyContact;
+  final String? gender; // 'Male', 'Female', 'Other'
 
   UserModel({
     required this.id,
@@ -41,6 +42,7 @@ class UserModel {
     this.lastDonationAt,
     this.emergencyContact,
     this.address,
+    this.gender,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -69,6 +71,7 @@ class UserModel {
           : null,
       emergencyContact: json['emergency_contact'] as String?,
       address: json['address'] as String?,
+      gender: json['gender'] as String?,
     );
   }
 
@@ -94,6 +97,7 @@ class UserModel {
       'last_donation_at': lastDonationAt?.toIso8601String(),
       'emergency_contact': emergencyContact,
       'address': address,
+      'gender': gender,
     };
   }
 
@@ -118,6 +122,7 @@ class UserModel {
     DateTime? lastDonationAt,
     String? emergencyContact,
     String? address,
+    String? gender,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -140,6 +145,7 @@ class UserModel {
       lastDonationAt: lastDonationAt ?? this.lastDonationAt,
       emergencyContact: emergencyContact ?? this.emergencyContact,
       address: address ?? this.address,
+      gender: gender ?? this.gender,
     );
   }
 

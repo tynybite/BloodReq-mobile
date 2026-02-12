@@ -64,6 +64,9 @@ class BloodRequest extends HiveObject {
   @HiveField(20)
   final Map<String, dynamic>? locationData; // Store full location object
 
+  @HiveField(21)
+  final String patientGender; // 'Male', 'Female', 'Other'
+
   BloodRequest({
     required this.id,
     required this.requestType,
@@ -85,6 +88,7 @@ class BloodRequest extends HiveObject {
     this.notes,
     this.updatedAt,
     this.locationData,
+    this.patientGender = 'Male', // Default to Male if missing
   });
 
   factory BloodRequest.fromJson(Map<String, dynamic> json) {
@@ -132,6 +136,7 @@ class BloodRequest extends HiveObject {
       locationData: json['location'] is Map<String, dynamic>
           ? json['location']
           : null,
+      patientGender: json['patient_gender'] ?? 'Male',
     );
   }
 
@@ -163,6 +168,7 @@ class BloodRequest extends HiveObject {
       'alternate_contact': alternateContact,
       'notes': notes,
       'updated_at': updatedAt?.toIso8601String(),
+      'patient_gender': patientGender,
     };
   }
 }

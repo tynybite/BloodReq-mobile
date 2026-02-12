@@ -36,8 +36,49 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   int _currentStep = 0;
   String _selectedBloodGroup = 'O+';
   String _selectedUrgency = 'urgent';
+  String _selectedGender = 'Male';
   String _selectedCity = 'Dhaka';
   DateTime _selectedDate = DateTime.now();
+
+  // ... (rest of binding) ...
+
+  Widget _buildGenderSelector(bool isDark) {
+    const genders = ['Male', 'Female', 'Other'];
+    return Row(
+      children: genders.map((gender) {
+        final isSelected = _selectedGender == gender;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: gender != genders.last ? 10 : 0),
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedGender = gender),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : AppColors.border,
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  gender,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   File? _medicalReport;
   bool _isLoading = false;
   bool _loadingCities = false;
@@ -268,6 +309,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
         'urgency': _selectedUrgency,
         'notes': _notesController.text.trim(),
         'required_date': _selectedDate.toIso8601String(),
+        'patient_gender': _selectedGender,
       },
     );
 
@@ -379,6 +421,15 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 20),
+
+          // Section: Patient Gender
+          _SectionCard(
+            icon: Icons.wc,
+            title: 'Patient Gender',
+            isDark: isDark,
+            child: _buildGenderSelector(isDark),
           ),
           const SizedBox(height: 20),
 
