@@ -14,6 +14,7 @@ class CacheService {
     _verificationBox = await Hive.openBox<PendingVerification>(
       _verificationBoxName,
     );
+    await _initMetaBox();
   }
 
   /// Get all cached blood requests
@@ -57,5 +58,23 @@ class CacheService {
     PendingVerification verification,
   ) async {
     await verification.delete();
+  }
+
+  // --- Sync Frequency Control ---
+  static const String _metaBoxName = 'cache_meta';
+  late Box _metaBox;
+
+  Future<void> _initMetaBox() async {
+    _metaBox = await Hive.openBox(_metaBoxName);
+  }
+
+  Future<void> saveLastSyncTime() async {
+    if (!_metaBox.isOpen) await _initMetaBox();
+    await _metaBox.put('last_sync_time', DateTime.now().millisecondsSinceEpoch);
+  }
+
+  int? getLastSyncTime() {
+    if (!_metaBox.isOpen) return null;
+    return _metaBox.get('last_sync_time');
   }
 }

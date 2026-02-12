@@ -19,11 +19,11 @@ class SyncService extends ChangeNotifier {
     await _cache.init();
 
     // Initial fetch if online
-    syncData();
+    syncData(force: false);
 
-    // Schedule 30 min sync
-    _syncTimer = Timer.periodic(const Duration(minutes: 30), (timer) {
-      syncData();
+    // Schedule 6-hour sync
+    _syncTimer = Timer.periodic(const Duration(hours: 6), (timer) {
+      syncData(force: true);
     });
   }
 
@@ -31,9 +31,26 @@ class SyncService extends ChangeNotifier {
     return _cache.getRequests();
   }
 
-  /// Manually trigger sync
-  Future<void> syncData() async {
+  /// Trigger sync.
+  /// [force] = true ignores the 6-hour interval check (e.g. pull-to-refresh).
+  Future<void> syncData({bool force = true}) async {
     if (_isSyncing) return;
+
+    // Check if sync is needed
+    if (!force) {
+      final lastSync = _cache.getLastSyncTime();
+      if (lastSync != null) {
+        final diff = DateTime.now().difference(
+          DateTime.fromMillisecondsSinceEpoch(lastSync),
+        );
+        if (diff.inHours < 6) {
+          debugPrint(
+            '⏳ SyncService: Data is fresh (${diff.inMinutes}m old). Skipping sync.',
+          );
+          return;
+        }
+      }
+    }
 
     _isSyncing = true;
     notifyListeners();
@@ -63,6 +80,8 @@ class SyncService extends ChangeNotifier {
             .toList();
 
         await _cache.saveRequests(requests);
+        await _cache.saveLastSyncTime(); // Update timestamp
+
         debugPrint(
           '✅ SyncService: Updated cache with ${requests.length} requests',
         );
