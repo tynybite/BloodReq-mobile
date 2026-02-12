@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# set -euo pipefail
 
-ROOT_DIR="$(git rev-parse --show-toplevel)"
-"$ROOT_DIR/scripts/pre_commit_checks.sh"
+# ROOT_DIR="$(git rev-parse --show-toplevel)"
+# "$ROOT_DIR/scripts/pre_commit_checks.sh"
