@@ -286,11 +286,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
             // Gender Field
             DropdownButtonFormField<String>(
-              value: _selectedGender,
+              initialValue: _selectedGender,
               decoration: InputDecoration(
-                labelText:
-                    lang.getText('gender') ??
-                    'Gender', // Fallback if key missing
+                labelText: lang.getText('gender'),
                 prefixIcon: const Icon(Icons.wc),
               ),
               items: [
