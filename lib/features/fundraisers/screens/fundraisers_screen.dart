@@ -10,6 +10,7 @@ import '../../../core/providers/language_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/fundraiser_cache_service.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 
 class FundraisersScreen extends StatefulWidget {
   const FundraisersScreen({super.key});
@@ -493,16 +494,40 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          final fund = _filteredFundraisers[index];
-          return _PremiumFundraiserCard(
-                fundraiser: fund,
-                onTap: () => context.push('/fundraiser/${fund['id']}'),
-              )
-              .animate(delay: Duration(milliseconds: 100 + index * 80))
-              .fadeIn(duration: 400.ms)
-              .slideY(begin: 0.05, end: 0, curve: Curves.easeOut);
-        }, childCount: _filteredFundraisers.length),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            // Calculate total items with ads
+            // Pattern: 5 items, 1 ad, 5 items, 1 ad...
+            // Index: 0,1,2,3,4, [5=Ad], 6,7,8,9,10, [11=Ad]...
+
+            if (index > 0 && (index + 1) % 6 == 0) {
+              return const Padding(
+                padding: EdgeInsets.only(bottom: 16),
+                child: NativeAdCard(),
+              ).animate().fadeIn().slideY(begin: 0.1, end: 0);
+            }
+
+            // Adjust index to get fundraiser
+            final adCount = (index + 1) ~/ 6;
+            final itemIndex = index - adCount;
+
+            if (itemIndex >= _filteredFundraisers.length) return null;
+
+            final fund = _filteredFundraisers[itemIndex];
+            return _PremiumFundraiserCard(
+                  fundraiser: fund,
+                  onTap: () => context.push('/fundraiser/${fund['id']}'),
+                )
+                .animate(
+                  delay: Duration(milliseconds: 100 + (itemIndex % 5) * 80),
+                )
+                .fadeIn(duration: 400.ms)
+                .slideY(begin: 0.05, end: 0, curve: Curves.easeOut);
+          },
+          // Total count = items + ads
+          childCount:
+              _filteredFundraisers.length + (_filteredFundraisers.length ~/ 5),
+        ),
       ),
     );
   }

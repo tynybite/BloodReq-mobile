@@ -9,6 +9,7 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/language_provider.dart';
 import '../../../shared/utils/avatar_utils.dart';
 import '../../../shared/widgets/donor_avatar_ring.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -286,6 +287,8 @@ class ProfileScreen extends StatelessWidget {
             },
           ),
           const SizedBox(height: 32),
+          const SizedBox(height: 60, child: Center(child: BannerAdWidget())),
+          const SizedBox(height: 20),
           _buildFooter(isDark, lang),
         ]),
       ),

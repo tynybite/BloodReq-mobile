@@ -15,6 +15,8 @@ import '../../../core/services/api_service.dart';
 import '../../../core/services/sync_service.dart';
 import '../../../core/models/blood_request.dart';
 import '../../../shared/widgets/offline_drop_screen.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 
 class BloodRequestsScreen extends StatefulWidget {
   const BloodRequestsScreen({super.key});
@@ -686,6 +688,11 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
                           .slideX(begin: 0.05, end: 0, curve: Curves.easeOut),
                 );
               }),
+              // Inject Native Ad after Matching Requests
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: NativeAdCard(),
+              ),
             ],
             if (_otherRequests.isNotEmpty) ...[
               Padding(
@@ -700,6 +707,10 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
               ..._otherRequests.asMap().entries.map((entry) {
                 final index = entry.key;
                 final req = entry.value;
+
+                // Inject Ad inside this list if it's long?
+                // For now, let's keep it simple.
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child:
@@ -716,6 +727,10 @@ class _BloodRequestsScreenState extends State<BloodRequestsScreen> {
                 );
               }),
             ],
+            // Banner Ad at the bottom
+            const SizedBox(height: 20),
+            const BannerAdWidget(),
+            const SizedBox(height: 20),
           ]),
         );
       },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_theme.dart';
@@ -168,17 +169,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadNotifications,
-        child: _buildBody(lang),
+      body: Column(
+        children: [
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadNotifications,
+              child: _buildBody(lang),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const BannerAdWidget(),
+          const SizedBox(height: 10),
+        ],
       ),
     );
   }
 
   Widget _buildBody(LanguageProvider lang) {
-    // Show permission request if not enabled
+    Widget content;
+
     if (!_notificationsEnabled) {
-      return Center(
+      content = Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
@@ -220,14 +231,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
       );
-    }
-
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return Center(
+    } else if (_isLoading) {
+      content = const Center(child: CircularProgressIndicator());
+    } else if (_error != null) {
+      content = Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -242,10 +249,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ),
       );
-    }
-
-    if (_notifications.isEmpty) {
-      return Center(
+    } else if (_notifications.isEmpty) {
+      content = Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -268,32 +273,40 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ),
       );
+    } else {
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _notifications.length,
+        itemBuilder: (context, index) {
+          final notif = _notifications[index];
+          return _NotificationCard(
+                title: notif['title'] ?? lang.getText('notification'),
+                body: notif['body'] ?? notif['message'] ?? '',
+                type: notif['type'],
+                createdAt: notif['created_at'],
+                isRead: notif['is_read'] ?? false,
+                isActionable: notif['is_actionable'] ?? false,
+                payload: notif['payload'],
+                icon: _getNotificationIcon(notif['type']),
+                color: _getNotificationColor(notif['type']),
+                onTap: () {
+                  // Handle navigation based on notification data
+                },
+                lang: lang,
+              )
+              .animate(delay: Duration(milliseconds: index * 50))
+              .fadeIn(duration: 300.ms)
+              .slideX(begin: 0.05, end: 0);
+        },
+      );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _notifications.length,
-      itemBuilder: (context, index) {
-        final notif = _notifications[index];
-        return _NotificationCard(
-              title: notif['title'] ?? lang.getText('notification'),
-              body: notif['body'] ?? notif['message'] ?? '',
-              type: notif['type'],
-              createdAt: notif['created_at'],
-              isRead: notif['is_read'] ?? false,
-              isActionable: notif['is_actionable'] ?? false,
-              payload: notif['payload'],
-              icon: _getNotificationIcon(notif['type']),
-              color: _getNotificationColor(notif['type']),
-              onTap: () {
-                // Handle navigation based on notification data
-              },
-              lang: lang,
-            )
-            .animate(delay: Duration(milliseconds: index * 50))
-            .fadeIn(duration: 300.ms)
-            .slideX(begin: 0.05, end: 0);
-      },
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: content,
+      ),
     );
   }
 }

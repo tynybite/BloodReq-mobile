@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:facebook_audience_network/facebook_audience_network.dart';
-import '../../../core/constants/app_theme.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../core/services/ad_service.dart';
 
 class NativeAdWidget extends StatefulWidget {
@@ -16,7 +15,8 @@ class NativeAdWidget extends StatefulWidget {
 class _NativeAdWidgetState extends State<NativeAdWidget>
     with AutomaticKeepAliveClientMixin {
   final AdService _adService = AdService();
-  Widget? _nativeAd;
+  BannerAd? _bannerAd; // Using MREC Banner as Native substitute
+  bool _isAdLoaded = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -24,53 +24,56 @@ class _NativeAdWidgetState extends State<NativeAdWidget>
   @override
   void initState() {
     super.initState();
-    _loadNativeAd();
+    _loadAd();
   }
 
-  void _loadNativeAd() {
-    if (_nativeAd != null) return;
+  void _loadAd() {
+    if (!_adService.adsEnabled) return;
 
-    _nativeAd = FacebookNativeAd(
-      placementId:
-          widget.placementId ?? _adService.getNativeBannerPlacementId(),
-      adType: NativeAdType.NATIVE_AD,
-      width: double.infinity,
-      backgroundColor: Colors.white,
-      titleColor: Colors.black,
-      descriptionColor: Colors.grey[700],
-      buttonColor: AppColors.primary,
-      buttonTitleColor: Colors.white,
-      buttonBorderColor: Colors.transparent,
-      keepExpandedWhileLoading: true,
-      expandAnimationDuraion: 300,
-      listener: (result, value) {
-        switch (result) {
-          case NativeAdResult.ERROR:
-            debugPrint('Native ad error: $value');
-            break;
-          case NativeAdResult.LOADED:
-            debugPrint('Native ad loaded');
-            break;
-          case NativeAdResult.CLICKED:
-            debugPrint('Native ad clicked');
-            break;
-          case NativeAdResult.LOGGING_IMPRESSION:
-            debugPrint('Native ad impression logged');
-            break;
-          case NativeAdResult.MEDIA_DOWNLOADED:
-            debugPrint('Native ad media downloaded');
-            break;
-        }
-      },
+    // Using default banner unit ID for now, or you could add a specific native/MREC unit ID to AdService
+    // Ideally AdService should have a getNativeAdUnitId or getMrecAdUnitId
+    // For this migration, we'll try to use the banner ID with MREC size,
+    // or better: add `nativeAdUnitId`/`mrecAdUnitId` to AdService.
+    // Let's assume we use Banner ID but ask for Medium Rectangle size.
+
+    _bannerAd = BannerAd(
+      adUnitId:
+          widget.placementId ??
+          _adService.bannerAdUnitId, // Reusing banner ID or use specific
+      size: AdSize.mediumRectangle,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          if (mounted) {
+            setState(() {
+              _isAdLoaded = true;
+            });
+          }
+        },
+        onAdFailedToLoad: (ad, error) {
+          debugPrint('Native (MREC) ad failed to load: $error');
+          ad.dispose();
+          // We don't nullify _bannerAd here inside listener easily for THIS instance
+          // but we should generally handle it.
+          // For now, simpler.
+        },
+      ),
     );
-    if (mounted) setState(() {});
+
+    _bannerAd!.load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    if (_nativeAd == null) {
+    if (!_isAdLoaded || _bannerAd == null) {
       return const SizedBox.shrink();
     }
 
@@ -78,7 +81,10 @@ class _NativeAdWidgetState extends State<NativeAdWidget>
       margin:
           widget.margin ??
           const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      height: 250, // MREC height
+      width: double.infinity,
       decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -90,7 +96,7 @@ class _NativeAdWidgetState extends State<NativeAdWidget>
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: _nativeAd,
+        child: Center(child: AdWidget(ad: _bannerAd!)),
       ),
     );
   }

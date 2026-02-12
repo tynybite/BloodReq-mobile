@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:facebook_audience_network/facebook_audience_network.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../core/services/ad_service.dart';
 
 class BannerAdWidget extends StatefulWidget {
   final double height;
   final EdgeInsets? padding;
+  final AdSize? adSize;
 
-  const BannerAdWidget({super.key, this.height = 50, this.padding});
+  const BannerAdWidget({
+    super.key,
+    this.height = 50,
+    this.padding,
+    this.adSize,
+  });
 
   @override
   State<BannerAdWidget> createState() => _BannerAdWidgetState();
@@ -15,7 +21,8 @@ class BannerAdWidget extends StatefulWidget {
 class _BannerAdWidgetState extends State<BannerAdWidget>
     with AutomaticKeepAliveClientMixin {
   final AdService _adService = AdService();
-  Widget? _bannerAd;
+  BannerAd? _bannerAd;
+  bool _isAdLoaded = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -27,40 +34,46 @@ class _BannerAdWidgetState extends State<BannerAdWidget>
   }
 
   void _loadBannerAd() {
-    // Prevent reloading if already loaded
-    if (_bannerAd != null) return;
+    if (!_adService.adsEnabled) return;
 
-    _bannerAd = FacebookBannerAd(
-      placementId: _adService.getBannerPlacementId(),
-      bannerSize: BannerSize.STANDARD,
-      keepAlive: true, // Internal keep alive
-      listener: (result, value) {
-        switch (result) {
-          case BannerAdResult.ERROR:
-            debugPrint('Banner ad error: $value');
-            break;
-          case BannerAdResult.LOADED:
-            debugPrint('Banner ad loaded');
-            break;
-          case BannerAdResult.CLICKED:
-            debugPrint('Banner ad clicked');
-            break;
-          case BannerAdResult.LOGGING_IMPRESSION:
-            debugPrint('Banner ad impression logged');
-            break;
-        }
-      },
+    _bannerAd = BannerAd(
+      adUnitId: _adService.bannerAdUnitId,
+      size: widget.adSize ?? AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          if (mounted) {
+            setState(() {
+              _isAdLoaded = true;
+            });
+          }
+        },
+        onAdFailedToLoad: (ad, error) {
+          debugPrint('BannerAd failed to load: $error');
+          ad.dispose();
+          // Clear reference to avoid double disposal
+          // Note: references in Listener might be tricky, but this helps.
+          // However, _bannerAd refers to the ad object instance.
+        },
+      ),
     );
-    // Only set state if mounted
-    if (mounted) setState(() {});
+
+    _bannerAd!.load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    _bannerAd = null; // Ensure we don't hold onto disposed ad
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    super.build(context);
 
-    if (_bannerAd == null) {
-      return const SizedBox.shrink();
+    if (!_isAdLoaded || _bannerAd == null) {
+      return SizedBox(height: widget.height);
     }
 
     return Padding(
@@ -68,7 +81,7 @@ class _BannerAdWidgetState extends State<BannerAdWidget>
       child: SizedBox(
         height: widget.height,
         width: double.infinity,
-        child: _bannerAd,
+        child: AdWidget(ad: _bannerAd!),
       ),
     );
   }

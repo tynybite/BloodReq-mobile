@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_theme.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 import '../../../core/providers/support_provider.dart';
 import '../../../core/providers/language_provider.dart';
 
@@ -105,177 +106,189 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
         icon: const Icon(Icons.add_rounded),
         label: Text(lang.getText('support_new_ticket')),
       ),
-      body: Consumer<SupportProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading && provider.tickets.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
+          Expanded(
+            child: Consumer<SupportProvider>(
+              builder: (context, provider, child) {
+                if (provider.isLoading && provider.tickets.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          if (provider.error != null && provider.tickets.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.error_outline_rounded,
-                    size: 48,
-                    color: context.textSecondary,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    provider.error!,
-                    style: TextStyle(color: context.textSecondary),
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () => provider.loadTickets(),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (provider.tickets.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.headset_mic_rounded,
-                    size: 64,
-                    color: context.textSecondary.withValues(alpha: 0.3),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    lang.getText('support_empty_title'),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: context.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    lang.getText('support_empty_subtitle'),
-                    style: TextStyle(color: context.textSecondary),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => provider.loadTickets(),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: provider.tickets.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final ticket = provider.tickets[index];
-                final statusColor = _statusColor(ticket.status);
-
-                return GestureDetector(
-                  onTap: () => context.push('/support/chat/${ticket.id}'),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: context.cardBg,
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                      border: Border.all(color: context.borderColor),
-                      boxShadow: context.cardShadow,
-                    ),
-                    padding: const EdgeInsets.all(16),
+                if (provider.error != null && provider.tickets.isEmpty) {
+                  return Center(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: statusColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.sm,
-                                ),
-                              ),
-                              child: Icon(
-                                _statusIcon(ticket.status),
-                                size: 18,
-                                color: statusColor,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                ticket.subject,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                  color: context.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _formatTimeAgo(ticket.createdAt),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: context.textSecondary,
-                              ),
-                            ),
-                          ],
+                        Icon(
+                          Icons.error_outline_rounded,
+                          size: 48,
+                          color: context.textSecondary,
                         ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            _Chip(
-                              label: _statusLabel(ticket.status),
-                              color: statusColor,
-                            ),
-                            const SizedBox(width: 6),
-                            _Chip(
-                              label: ticket.category,
-                              color: context.textSecondary,
-                            ),
-                            const Spacer(),
-                            Icon(
-                              Icons.message_rounded,
-                              size: 14,
-                              color: context.textSecondary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${ticket.messageCount}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: context.textSecondary,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 12),
+                        Text(
+                          provider.error!,
+                          style: TextStyle(color: context.textSecondary),
                         ),
-                        if (ticket.lastMessage != null) ...[
-                          const SizedBox(height: 10),
-                          Text(
-                            '${ticket.lastMessage!.isAdmin ? "Admin: " : ""}${ticket.lastMessage!.text}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: context.textSecondary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () => provider.loadTickets(),
+                          child: Text(lang.getText('retry')),
+                        ),
                       ],
                     ),
+                  );
+                }
+
+                if (provider.tickets.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.headset_mic_rounded,
+                          size: 64,
+                          color: context.textSecondary.withValues(alpha: 0.3),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          lang.getText('support_empty_title'),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: context.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          lang.getText('support_empty_subtitle'),
+                          style: TextStyle(color: context.textSecondary),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () => provider.loadTickets(),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: provider.tickets.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final ticket = provider.tickets[index];
+                      final statusColor = _statusColor(ticket.status);
+
+                      return GestureDetector(
+                        onTap: () => context.push('/support/chat/${ticket.id}'),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: context.cardBg,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            border: Border.all(color: context.borderColor),
+                            boxShadow: context.cardShadow,
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.sm,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      _statusIcon(ticket.status),
+                                      size: 18,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      ticket.subject,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                        color: context.textPrimary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _formatTimeAgo(ticket.createdAt),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: context.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  _Chip(
+                                    label: _statusLabel(ticket.status),
+                                    color: statusColor,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _Chip(
+                                    label: ticket.category,
+                                    color: context.textSecondary,
+                                  ),
+                                  const Spacer(),
+                                  Icon(
+                                    Icons.message_rounded,
+                                    size: 14,
+                                    color: context.textSecondary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${ticket.messageCount}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: context.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (ticket.lastMessage != null) ...[
+                                const SizedBox(height: 10),
+                                Text(
+                                  '${ticket.lastMessage!.isAdmin ? "Admin: " : ""}${ticket.lastMessage!.text}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: context.textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ).animate().fadeIn(
+                        duration: 300.ms,
+                        delay: (index * 50).ms,
+                      );
+                    },
                   ),
-                ).animate().fadeIn(duration: 300.ms, delay: (index * 50).ms);
+                );
               },
             ),
-          );
-        },
+          ),
+          const SizedBox(height: 10),
+          const BannerAdWidget(),
+          const SizedBox(height: 10),
+        ],
       ),
     );
   }

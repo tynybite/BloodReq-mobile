@@ -63,6 +63,7 @@ dependencies:
   flutter_displaymode: ^0.7.0
 
   # Ads
+  google_mobile_ads: ^5.0.0
   facebook_audience_network: ^1.0.1
   flutter_native_splash: ^2.4.3
 
