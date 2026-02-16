@@ -38,6 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _selectedCountry; // For Location Step
   String? _selectedCity; // For Location Step
   String _selectedCountryFlag = '🇧🇩'; // Default to BD or update on selection
+  String _selectedGender = 'Male'; // Default gender
 
   // New Phone Country State
   CountryOption _phoneCountry = CountryConfig.getOption('US');
@@ -215,6 +216,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       bloodGroup: _selectedBloodGroup,
       country: _selectedCountry!,
       city: _selectedCity!,
+      gender: _selectedGender,
     );
 
     setState(() => _isLoading = false);
@@ -607,6 +609,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+
+            // Gender Dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedGender,
+              decoration: InputDecoration(
+                labelText: lang.getText('gender'),
+                prefixIcon: const Icon(Icons.person),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: context.borderColor),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: context.borderColor),
+                ),
+              ),
+              items: ['Male', 'Female', 'Other']
+                  .map(
+                    (gender) =>
+                        DropdownMenuItem(value: gender, child: Text(gender)),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _selectedGender = value);
+                }
+              },
             ),
             const SizedBox(height: 16),
 

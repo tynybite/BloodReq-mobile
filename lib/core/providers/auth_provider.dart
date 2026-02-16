@@ -375,6 +375,7 @@ class AuthProvider with ChangeNotifier {
     required String bloodGroup,
     required String country,
     required String city,
+    required String gender,
     String? area,
   }) async {
     _status = AuthStatus.loading;
@@ -387,11 +388,8 @@ class AuthProvider with ChangeNotifier {
         body: {
           'email': email,
           'password': password,
-          'full_name': fullName,
-          'phone_number': phoneNumber,
-          'blood_group': bloodGroup,
-          'country': country,
           'city': city,
+          'gender': gender,
           if (area != null) 'area': area,
         },
       );
