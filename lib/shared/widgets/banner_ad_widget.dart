@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:facebook_audience_network/facebook_audience_network.dart';
 import '../../../core/services/ad_service.dart';
 
 class BannerAdWidget extends StatefulWidget {
@@ -36,35 +37,39 @@ class _BannerAdWidgetState extends State<BannerAdWidget>
   void _loadBannerAd() {
     if (!_adService.adsEnabled) return;
 
-    _bannerAd = BannerAd(
-      adUnitId: _adService.bannerAdUnitId,
-      size: widget.adSize ?? AdSize.banner,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (_) {
-          if (mounted) {
-            setState(() {
-              _isAdLoaded = true;
-            });
-          }
-        },
-        onAdFailedToLoad: (ad, error) {
-          debugPrint('BannerAd failed to load: $error');
-          ad.dispose();
-          // Clear reference to avoid double disposal
-          // Note: references in Listener might be tricky, but this helps.
-          // However, _bannerAd refers to the ad object instance.
-        },
-      ),
-    );
-
-    _bannerAd!.load();
+    if (_adService.currentProvider == AdProvider.admob) {
+      _bannerAd = BannerAd(
+        adUnitId: _adService.bannerAdUnitId,
+        size: widget.adSize ?? AdSize.banner,
+        request: const AdRequest(),
+        listener: BannerAdListener(
+          onAdLoaded: (_) {
+            if (mounted) {
+              setState(() {
+                _isAdLoaded = true;
+              });
+            }
+          },
+          onAdFailedToLoad: (ad, error) {
+            debugPrint('BannerAd failed to load: $error');
+            ad.dispose();
+            _bannerAd = null;
+          },
+        ),
+      );
+      _bannerAd!.load();
+    } else if (_adService.currentProvider == AdProvider.facebook) {
+      // FacebookBannerAd handles loading internally when mounted
+      setState(() {
+        _isAdLoaded = true; // Assume true to render the widget
+      });
+    }
   }
 
   @override
   void dispose() {
     _bannerAd?.dispose();
-    _bannerAd = null; // Ensure we don't hold onto disposed ad
+    _bannerAd = null;
     super.dispose();
   }
 
@@ -72,8 +77,34 @@ class _BannerAdWidgetState extends State<BannerAdWidget>
   Widget build(BuildContext context) {
     super.build(context);
 
+    if (!_adService.adsEnabled) {
+      return const SizedBox.shrink();
+    }
+
+    // Handle Facebook Ads
+    if (_adService.currentProvider == AdProvider.facebook) {
+      return Padding(
+        padding: widget.padding ?? EdgeInsets.zero,
+        child: SizedBox(
+          height: widget.height,
+          width: double.infinity,
+          child: FacebookBannerAd(
+            placementId:
+                _adService.bannerAdUnitId, // This returns Placement ID for FB
+            bannerSize: BannerSize.STANDARD,
+            listener: (result, value) {
+              if (result == BannerAdResult.ERROR) {
+                debugPrint("Facebook Banner Error: $value");
+              }
+            },
+          ),
+        ),
+      );
+    }
+
+    // Handle AdMob Ads
     if (!_isAdLoaded || _bannerAd == null) {
-      return SizedBox(height: widget.height);
+      return SizedBox(height: widget.height); // Placeholder until loaded
     }
 
     return Padding(
