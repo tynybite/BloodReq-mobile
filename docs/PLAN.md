@@ -1,63 +1,41 @@
-# Plan: Gender Selection & Facebook/AdMob Bidding Implementation
+# Ad Configuration & Mediation Verification Plan
 
-## Goal
+## Analysis
 
-1.  **Gender Selection**: Add gender selection to the Sign-Up flow and save it to the user profile.
-2.  **Ads**: Implement Facebook Ads (Audience Network) alongside AdMob, enabling Bidding via AdMob Mediation.
+The Admin Panel provides separate switches for "Google AdMob" and "Meta Audience Network".
+However, the Mobile App implementation (and the requested Bidding feature) relies on **AdMob Mediation**.
 
-## User Review Required
+### Current Behavior
 
-> [!IMPORTANT]
-> **AdMob Mediation & Bidding**: To enable "Bidding" for Facebook Audience Network via AdMob, you must:
->
-> 1.  Set up a **Meta Audience Network Property** and **Ad Units**.
-> 2.  Configure **AdMob Mediation** in the AdMob Console, adding Facebook as a Bidding source and mapping the ID.
-> 3.  This plan adds the necessary **SDKs and Adapters** to the mobile app code. You must perform the Console setup yourself.
+1.  **AdMob Enabled (Admin)**: Mobile App initializes AdMob. If configured in AdMob Console, it **WILL** serve Facebook Ads (Bidding). -> **WORKS**
+2.  **AdMob Disabled / Meta Enabled (Admin)**: Mobile App receives "Ads Enabled" signal but **Missing AdMob Config**. It does NOT initialize Facebook SDK directly. -> **NO ADS**
+
+## Recommendation
+
+To support Facebook Bidding "along with" AdMob (as requested), you must use **AdMob Mediation**.
+
+- **Admin Panel**: You must keep **Google AdMob ENABLED**.
+- **AdMob Console**: You must configure **Facebook Audience Network** as a Bidding Source.
+- **Meta Settings (Admin)**: These settings are effectively **unused** by the mobile app in Mediation mode (as AdMob fetches config from Google servers). You can leave them for reference or disable them to avoid confusion.
 
 ## Proposed Changes
 
-### 1. Backend Integration (Auth Provider)
+To ensure the app behaves predictably and aids debugging:
 
-- **File**: `lib/core/providers/auth_provider.dart`
-  - Update `signUpWithEmail` method to accept a `required String gender` argument.
-  - Include `gender` in the API request body.
+### 1. Mobile App (`AdService.dart`)
 
-### 2. Frontend (Sign Up UI)
+- Add logic to gracefully handle the "AdMob Disabled" state. (Currently it might try to read null config).
+- Add a debug warning if `ads_enabled` is true but `admob` config is missing (reminding developer that Direct Meta is not supported).
 
-- **File**: `lib/features/auth/screens/register_screen.dart`
-  - Add `_selectedGender` state variable (Default: 'Male' or null).
-  - Add a Gender Dropdown/Selector in `_buildBasicInfoStep` (e.g., below Phone Number).
-  - Update `_handleRegister` to pass the selected gender to `authProvider`.
+### 2. Backend (Admin API) - _Optional_
 
-### 3. Ads Implementation (AdMob Mediation + Facebook)
-
-- **Dependencies**:
-  - Add `com.google.ads.mediation:facebook` adapter to Android.
-  - Add `GoogleMobileAdsMediationFacebook` to iOS Podfile.
-- **File**: `android/app/build.gradle.kts`
-  - Add implementation for Facebook Mediation Adapter.
-- **File**: `ios/Podfile`
-  - Ensure Facebook Mediation pod is included.
-- **File**: `lib/core/services/ad_service.dart`
-  - Ensure `MobileAds.instance.initialize()` is called (checks for all adapters).
-  - (Optional) If you want to use Facebook Native Ads directly via Flutter widgets, we keep `facebook_audience_network`. If we only want Bidding via AdMob, we strictly need the Adapter. I will assume we keep the package to allow potential future hybrid usage, but focus on Mediation for Bidding.
+- (No changes required, logic is safe).
 
 ## Verification Plan
 
-### Automated Tests
+1.  **Configuration Check**: Ensure "Google AdMob" is Enabled in Admin.
+2.  **Mobile Logs**: Run app and check `flutter logs` for "Ad config fetched".
+3.  **Mediation**: Verify Facebook Adapter is initialized (via internal logs or Test Suite).
 
-- **Unit Test**: Update `auth_provider_test.dart` (if exists) to verify `sign_up` passes gender.
-- **Build Test**: Run `flutter build apk` to verify Gradle dependencies resolve correctly (especially Mediation adapters).
-
-### Manual Verification
-
-1.  **Sign Up**:
-    - Go to Sign Up screen.
-    - Verify "Gender" dropdown appears.
-    - Select a gender (e.g., "Female").
-    - Complete Sign Up.
-    - Check Firestore/Backend (or Profile page) to see if Gender is saved.
-2.  **Ads**:
-    - Run app on a real device (Ads often fail on emulators).
-    - Verify Banner/Interstitial ads load.
-    - (Note: Bidding is hard to verify visually without Console tools, but we can check logs for "Facebook Adapter initialized").
+> [!NOTE]
+> We will NOT implement a separate "Direct Facebook SDK" mode, as it conflicts with the "Bidding via Mediation" goal and complicates the codebase. AdMob Mediation is the industry standard for Bidding.

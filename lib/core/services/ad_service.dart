@@ -58,16 +58,23 @@ class AdService {
         final data = json.decode(response.body);
         if (data['success'] == true) {
           _adsEnabled = data['data']['ads_enabled'] == true;
-          if (_adsEnabled && data['data']['config'] != null) {
-            _remoteConfig = data['data']['config']['admob'];
+          if (_adsEnabled) {
+            final admobConfig = data['data']['config']['admob'];
+            if (admobConfig != null && admobConfig['enabled'] == true) {
+              _remoteConfig = admobConfig;
+            } else {
+              debugPrint(
+                'Warning: Ads enabled globally but AdMob config missing or disabled. Mediation requires AdMob.',
+              );
+              _adsEnabled = false; // Disable ads if AdMob is missing
+            }
           }
           debugPrint('Ad config fetched: adsEnabled=$_adsEnabled');
         }
       }
     } catch (e) {
       debugPrint('Failed to fetch ad config: $e');
-      // If fetch fails, we default to false (disabled) for safety in production
-      // or true if you want to be aggressive, but user requested safety.
+      _adsEnabled = false;
     }
   }
 
