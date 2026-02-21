@@ -13,78 +13,103 @@ class MyDonationsScreen extends StatefulWidget {
   State<MyDonationsScreen> createState() => _MyDonationsScreenState();
 }
 
-class _MyDonationsScreenState extends State<MyDonationsScreen> {
+class _MyDonationsScreenState extends State<MyDonationsScreen>
+    with SingleTickerProviderStateMixin {
   final ApiService _api = ApiService();
+  late TabController _tabController;
 
-  List<Map<String, dynamic>> _donations = [];
+  List<Map<String, dynamic>> _bloodDonations = [];
+  List<Map<String, dynamic>> _paymentDonations = [];
   bool _isLoading = true;
-  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadMyDonations();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadAll();
   }
 
-  Future<void> _loadMyDonations() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
+  Future<void> _loadAll() async {
+    setState(() => _isLoading = true);
+    await Future.wait([_loadBloodDonations(), _loadPaymentDonations()]);
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _loadBloodDonations() async {
     final response = await _api.get<dynamic>('/blood-donations/my');
-
     if (response.success && response.data != null) {
-      List<dynamic> donationsList;
-
+      List<dynamic> list;
       if (response.data is List) {
-        donationsList = response.data as List;
+        list = response.data as List;
       } else if (response.data is Map) {
-        final mapData = response.data as Map<String, dynamic>;
-        donationsList = (mapData['data'] ?? mapData['donations'] ?? []) as List;
+        final m = response.data as Map<String, dynamic>;
+        list = (m['data'] ?? m['donations'] ?? []) as List;
       } else {
-        donationsList = [];
+        list = [];
       }
-
-      setState(() {
-        _donations = donationsList
-            .map((e) => e as Map<String, dynamic>)
-            .toList();
-      });
-    } else {
-      setState(() => _error = response.message ?? 'Failed to load donations');
+      if (mounted) {
+        setState(
+          () => _bloodDonations = list
+              .map((e) => e as Map<String, dynamic>)
+              .toList(),
+        );
+      }
     }
-
-    setState(() => _isLoading = false);
   }
 
-  Color _getStatusColor(String? status) {
-    switch (status) {
-      case 'offered':
-        return AppColors.info;
-      case 'accepted':
-        return AppColors.warning;
+  Future<void> _loadPaymentDonations() async {
+    final response = await _api.get<dynamic>('/donations/my');
+    if (response.success && response.data != null) {
+      List<dynamic> list;
+      if (response.data is List) {
+        list = response.data as List;
+      } else if (response.data is Map) {
+        final m = response.data as Map<String, dynamic>;
+        list = (m['donations'] ?? m['data'] ?? []) as List;
+      } else {
+        list = [];
+      }
+      if (mounted) {
+        setState(
+          () => _paymentDonations = list
+              .map((e) => e as Map<String, dynamic>)
+              .toList(),
+        );
+      }
+    }
+  }
+
+  Color _statusColor(String? s) {
+    switch (s) {
       case 'completed':
         return AppColors.success;
+      case 'offered':
+      case 'accepted':
+        return AppColors.warning;
       case 'cancelled':
+      case 'failed':
         return AppColors.error;
       default:
         return AppColors.textTertiary;
     }
   }
 
-  IconData _getStatusIcon(String? status) {
-    switch (status) {
+  IconData _statusIcon(String? s) {
+    switch (s) {
+      case 'completed':
+        return Icons.check_circle_outline;
       case 'offered':
         return Icons.hourglass_empty;
       case 'accepted':
         return Icons.handshake_outlined;
-      case 'completed':
-        return Icons.check_circle_outline;
-      case 'cancelled':
-        return Icons.cancel_outlined;
       default:
-        return Icons.circle_outlined;
+        return Icons.cancel_outlined;
     }
   }
 
@@ -96,87 +121,259 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> {
         title: const Text('My Donations'),
         backgroundColor: context.scaffoldBg,
         surfaceTintColor: Colors.transparent,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(
+              text: 'Blood Offers',
+              icon: Icon(Icons.bloodtype_outlined, size: 18),
+            ),
+            Tab(
+              text: 'Payments',
+              icon: Icon(Icons.payments_outlined, size: 18),
+            ),
+          ],
+        ),
       ),
-      body: RefreshIndicator(onRefresh: _loadMyDonations, child: _buildBody()),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadAll,
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _BloodDonationsList(
+                    donations: _bloodDonations,
+                    statusColor: _statusColor,
+                    statusIcon: _statusIcon,
+                  ),
+                  _PaymentDonationsList(donations: _paymentDonations),
+                ],
+              ),
+            ),
     );
   }
+}
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+// ─── Blood Offers Tab ─────────────────────────────────────────────────────────
 
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: AppColors.error),
-              const SizedBox(height: 16),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadMyDonations,
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+class _BloodDonationsList extends StatelessWidget {
+  final List<Map<String, dynamic>> donations;
+  final Color Function(String?) statusColor;
+  final IconData Function(String?) statusIcon;
 
-    if (_donations.isEmpty) {
-      return Center(
+  const _BloodDonationsList({
+    required this.donations,
+    required this.statusColor,
+    required this.statusIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (donations.isEmpty) {
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.volunteer_activism_outlined,
               size: 80,
-              color: AppColors.textTertiary,
+              color: Colors.grey,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
-              'No donations yet',
-              style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Offer to donate when you see a request',
-              style: TextStyle(color: AppColors.textTertiary),
-              textAlign: TextAlign.center,
+              'No blood donation offers yet',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
             ),
           ],
         ),
       );
     }
-
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _donations.length,
-      itemBuilder: (context, index) {
-        final donation = _donations[index];
-        return _DonationCard(
-              donation: donation,
-              statusColor: _getStatusColor(donation['status']),
-              statusIcon: _getStatusIcon(donation['status']),
+      itemCount: donations.length,
+      itemBuilder: (ctx, i) {
+        final d = donations[i];
+        return _BloodDonationCard(
+              donation: d,
+              statusColor: statusColor(d['status']),
+              statusIcon: statusIcon(d['status']),
             )
-            .animate(delay: Duration(milliseconds: index * 50))
-            .fadeIn(duration: 300.ms)
-            .slideY(begin: 0.1, end: 0);
+            .animate(delay: Duration(milliseconds: i * 50))
+            .fadeIn()
+            .slideY(begin: 0.1);
       },
     );
   }
 }
 
-class _DonationCard extends StatelessWidget {
+// ─── Payment Donations Tab ────────────────────────────────────────────────────
+
+class _PaymentDonationsList extends StatelessWidget {
+  final List<Map<String, dynamic>> donations;
+
+  const _PaymentDonationsList({required this.donations});
+
+  String _fmt(dynamic amount, String currency) {
+    final n = (amount ?? 0).toDouble();
+    final sym = currency == 'USD' ? '\$' : '৳';
+    return '$sym${n.toStringAsFixed(currency == 'USD' ? 2 : 0)}';
+  }
+
+  String _fmtDate(String? s) {
+    if (s == null) return '';
+    try {
+      return DateFormat('MMM d, yyyy').format(DateTime.parse(s));
+    } catch (_) {
+      return s;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (donations.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.payments_outlined, size: 80, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'No fundraiser donations yet',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Donate to a fundraiser to see it here',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: donations.length,
+      itemBuilder: (ctx, i) {
+        final d = donations[i];
+        final currency = (d['currency'] ?? 'BDT') as String;
+        final method = (d['payment_method'] ?? '') as String;
+        final isBkash = method == 'bkash';
+        final methodColor = isBkash
+            ? const Color(0xFFE2166E)
+            : const Color(0xFF635BFF);
+
+        return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: ctx.cardBg,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Payment method icon
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: methodColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      isBkash ? Icons.phone_android : Icons.credit_card,
+                      color: methodColor,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+
+                  // Fundraiser title + method/date
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          d['fundraiser_title']?.toString().isNotEmpty == true
+                              ? d['fundraiser_title'].toString()
+                              : 'Fundraiser Donation',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${method.isNotEmpty ? method[0].toUpperCase() + method.substring(1) : 'Payment'}'
+                          ' • ${_fmtDate(d['created_at']?.toString())}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Amount + status badge
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        _fmt(d['amount'], currency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          (d['status'] ?? 'completed').toString().toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
+            .animate(delay: Duration(milliseconds: i * 50))
+            .fadeIn()
+            .slideY(begin: 0.1);
+      },
+    );
+  }
+}
+
+// ─── Blood Donation Card ──────────────────────────────────────────────────────
+
+class _BloodDonationCard extends StatelessWidget {
   final Map<String, dynamic> donation;
   final Color statusColor;
   final IconData statusIcon;
 
-  const _DonationCard({
+  const _BloodDonationCard({
     required this.donation,
     required this.statusColor,
     required this.statusIcon,
@@ -185,8 +382,7 @@ class _DonationCard extends StatelessWidget {
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
     try {
-      final date = DateTime.parse(dateStr);
-      return DateFormat('MMM d, yyyy').format(date);
+      return DateFormat('MMM d, yyyy').format(DateTime.parse(dateStr));
     } catch (_) {
       return dateStr;
     }
@@ -215,7 +411,6 @@ class _DonationCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              // Status Icon
               Container(
                 width: 48,
                 height: 48,
@@ -226,8 +421,6 @@ class _DonationCard extends StatelessWidget {
                 child: Icon(statusIcon, color: statusColor),
               ),
               const SizedBox(width: 14),
-
-              // Details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,7 +445,7 @@ class _DonationCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            request['blood_group'] ?? '?',
+                            request['blood_group'] ?? '—',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -261,11 +454,14 @@ class _DonationCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          request['hospital'] ?? '',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
+                        Flexible(
+                          child: Text(
+                            request['hospital'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -273,8 +469,6 @@ class _DonationCard extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // Status Badge
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -296,8 +490,6 @@ class _DonationCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-
-          // Date
           Row(
             children: [
               Icon(
@@ -307,7 +499,7 @@ class _DonationCard extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                _formatDate(donation['created_at']),
+                _formatDate(donation['created_at']?.toString()),
                 style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
               ),
               if (donation['message'] != null &&
@@ -321,7 +513,7 @@ class _DonationCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    donation['message'],
+                    donation['message'].toString(),
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textTertiary,
@@ -332,8 +524,6 @@ class _DonationCard extends StatelessWidget {
               ],
             ],
           ),
-
-          // Verify Button for Donor
           if (donation['status'] == 'offered' ||
               donation['status'] == 'accepted')
             Padding(
