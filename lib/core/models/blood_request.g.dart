@@ -37,7 +37,7 @@ class BloodRequestAdapter extends TypeAdapter<BloodRequest> {
       notes: fields[18] as String?,
       updatedAt: fields[19] as DateTime?,
       locationData: (fields[20] as Map?)?.cast<String, dynamic>(),
-      patientGender: fields[21] as String,
+      patientGender: fields[21] as String? ?? 'Male',
     );
   }
 

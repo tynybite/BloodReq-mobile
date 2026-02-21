@@ -67,6 +67,10 @@ dependencies:
   facebook_audience_network: ^1.0.1
   flutter_native_splash: ^2.4.3
 
+  # Payments
+  flutter_stripe: ^12.3.0
+  webview_flutter: ^4.10.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

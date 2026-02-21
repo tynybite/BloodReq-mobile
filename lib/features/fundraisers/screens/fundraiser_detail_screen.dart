@@ -4,6 +4,8 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/bkash_service.dart';
+import '../../../core/services/stripe_service.dart';
 import '../../../shared/utils/app_toast.dart';
 import '../../../core/providers/language_provider.dart';
 
@@ -22,7 +24,6 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
   Map<String, dynamic>? _fundraiser;
   bool _isLoading = true;
   String? _error;
-  bool _donating = false;
 
   @override
   void initState() {
@@ -65,8 +66,17 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
   }
 
   Future<void> _showDonateSheet() async {
-    final amountController = TextEditingController();
     final lang = Provider.of<LanguageProvider>(context, listen: false);
+
+    // Pre-fetch exchange rate
+    double bdtPerUsd = 110.0;
+    final rateRes = await _api.get<dynamic>('/payments/exchange-rate');
+    if (rateRes.success && rateRes.data != null) {
+      final rateData = rateRes.data as Map<String, dynamic>;
+      bdtPerUsd = (rateData['bdt_per_usd'] ?? 110.0).toDouble();
+    }
+
+    if (!mounted) return;
 
     await showModalBottomSheet(
       context: context,
@@ -74,122 +84,15 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (modalContext) => StatefulBuilder(
-        builder: (sheetContext, setSheetState) {
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-              24,
-              24,
-              24,
-              MediaQuery.of(sheetContext).viewInsets.bottom + 24,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  lang.getText('donate_to_fundraiser'),
-                  style: Theme.of(
-                    sheetContext,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _fundraiser?['title'] ??
-                      lang.getText('fundraiser_default_title'),
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 24),
-
-                // Amount Field
-                TextField(
-                  controller: amountController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: lang.getText('donation_amount_label'),
-                    prefixIcon: const Icon(Icons.attach_money),
-                    hintText: lang.getText('donation_amount_hint'),
-                  ),
-                  autofocus: true,
-                ),
-                const SizedBox(height: 16),
-
-                // Quick amounts
-                Wrap(
-                  spacing: 8,
-                  children: [100, 500, 1000, 5000].map((amount) {
-                    return ActionChip(
-                      label: Text('৳$amount'),
-                      onPressed: () {
-                        amountController.text = amount.toString();
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 24),
-
-                // Donate Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _donating
-                        ? null
-                        : () async {
-                            final amount = int.tryParse(amountController.text);
-                            if (amount == null || amount < 10) {
-                              AppToast.error(
-                                context,
-                                lang.getText('min_donation_error'),
-                              );
-                              return;
-                            }
-
-                            setSheetState(() => _donating = true);
-
-                            final response = await _api.post(
-                              '/fundraisers/${widget.fundraiserId}/donate',
-                              body: {'amount': amount},
-                            );
-
-                            setSheetState(() => _donating = false);
-
-                            if (!mounted) return;
-
-                            if (response.success) {
-                              Navigator.pop(context);
-                              if (mounted) {
-                                AppToast.success(
-                                  context,
-                                  lang.getText('donation_success'),
-                                );
-                              }
-                              _loadFundraiser(); // Refresh
-                            } else {
-                              if (mounted) {
-                                AppToast.error(
-                                  context,
-                                  response.message ??
-                                      lang.getText('donation_failed'),
-                                );
-                              }
-                            }
-                          },
-                    child: _donating
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(lang.getText('donate_now')),
-                  ),
-                ),
-              ],
-            ),
-          );
+      builder: (modalContext) => _DonateSheet(
+        fundraiserId: widget.fundraiserId,
+        fundraiserTitle: _fundraiser?['title'] ?? '',
+        bdtPerUsd: bdtPerUsd,
+        onSuccess: () {
+          if (mounted) {
+            AppToast.success(context, lang.getText('donation_success'));
+            _loadFundraiser();
+          }
         },
       ),
     );
@@ -485,5 +388,343 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
       return '${(num / 1000).toStringAsFixed(1)}K';
     }
     return num.toStringAsFixed(0);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Separate StatefulWidget for the donate bottom sheet
+// (keeps the parent clean and avoids StatefulBuilder complexity)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum _PayCurrency { bdt, usd }
+
+class _DonateSheet extends StatefulWidget {
+  final String fundraiserId;
+  final String fundraiserTitle;
+  final double bdtPerUsd;
+  final VoidCallback onSuccess;
+
+  const _DonateSheet({
+    required this.fundraiserId,
+    required this.fundraiserTitle,
+    required this.bdtPerUsd,
+    required this.onSuccess,
+  });
+
+  @override
+  State<_DonateSheet> createState() => _DonateSheetState();
+}
+
+class _DonateSheetState extends State<_DonateSheet> {
+  final _amountController = TextEditingController();
+  _PayCurrency _currency = _PayCurrency.bdt;
+  bool _paying = false;
+
+  // Preset amounts per currency
+  static const _bdtPresets = [100, 500, 1000, 5000];
+  static const _usdPresets = [1, 5, 10, 50];
+
+  bool get _isBdt => _currency == _PayCurrency.bdt;
+
+  String get _symbol => _isBdt ? '৳' : '\$';
+
+  /// Converted equivalent shown below the text field
+  String get _convertedLabel {
+    final input = double.tryParse(_amountController.text);
+    if (input == null || input <= 0) return '';
+    if (_isBdt) {
+      final usd = input / widget.bdtPerUsd;
+      return '≈ \$${usd.toStringAsFixed(2)} USD';
+    } else {
+      final bdt = input * widget.bdtPerUsd;
+      return '≈ ৳${bdt.toStringAsFixed(0)} BDT';
+    }
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pay() async {
+    final raw = double.tryParse(_amountController.text);
+    if (raw == null || raw <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter a valid amount')));
+      return;
+    }
+
+    setState(() => _paying = true);
+
+    try {
+      bool success;
+
+      if (_isBdt) {
+        final amountBdt = raw.round();
+        if (amountBdt < 10) throw Exception('Minimum donation is ৳10');
+        success = await BkashService().donateTo(
+          fundraiserId: widget.fundraiserId,
+          amountBdt: amountBdt,
+          context: context,
+        );
+      } else {
+        if (raw < 0.5) throw Exception('Minimum donation is \$0.50');
+        success = await StripeService().donateTo(
+          fundraiserId: widget.fundraiserId,
+          amount: raw, // dollars — StripeService sends as-is to backend
+          context: context,
+        );
+      }
+
+      if (!mounted) return;
+      setState(() => _paying = false);
+
+      if (success) {
+        Navigator.of(context).pop();
+        widget.onSuccess();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _paying = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final presets = _isBdt ? _bdtPresets : _usdPresets;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        24,
+        24,
+        24,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ──────────────────────────────────────────────────────────
+          Text(
+            'Donate to Fundraiser',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          if (widget.fundraiserTitle.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              widget.fundraiserTitle,
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+
+          const SizedBox(height: 20),
+
+          // ── Currency toggle ──────────────────────────────────────────────────
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.all(4),
+            child: Row(
+              children: [
+                _CurrencyTab(
+                  label: '৳ BDT',
+                  sublabel: 'bKash',
+                  color: const Color(0xFFE2166E),
+                  selected: _isBdt,
+                  onTap: () {
+                    setState(() {
+                      _currency = _PayCurrency.bdt;
+                      _amountController.clear();
+                    });
+                  },
+                ),
+                _CurrencyTab(
+                  label: '\$ USD',
+                  sublabel: 'Stripe',
+                  color: const Color(0xFF635BFF),
+                  selected: !_isBdt,
+                  onTap: () {
+                    setState(() {
+                      _currency = _PayCurrency.usd;
+                      _amountController.clear();
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ── Amount field ─────────────────────────────────────────────────────
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _amountController,
+            builder: (context, value, child) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _amountController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Amount ($_symbol)',
+                    prefixText: '$_symbol ',
+                    hintText: _isBdt ? '500' : '5.00',
+                  ),
+                  autofocus: true,
+                ),
+                if (_convertedLabel.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Text(
+                      _convertedLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // ── Quick-amount chips ───────────────────────────────────────────────
+          Wrap(
+            spacing: 8,
+            children: presets.map((p) {
+              final label = _isBdt ? '৳$p' : '\$$p';
+              final color = _isBdt
+                  ? const Color(0xFFE2166E)
+                  : const Color(0xFF635BFF);
+              return ActionChip(
+                label: Text(
+                  label,
+                  style: TextStyle(color: color, fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: color.withValues(alpha: 0.1),
+                side: BorderSide(color: color.withValues(alpha: 0.3)),
+                onPressed: () =>
+                    setState(() => _amountController.text = p.toString()),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── Pay button ───────────────────────────────────────────────────────
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isBdt
+                    ? const Color(0xFFE2166E)
+                    : const Color(0xFF635BFF),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: _paying ? null : _pay,
+              child: _paying
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _isBdt ? Icons.phone_android : Icons.credit_card,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _isBdt ? 'Pay with bKash' : 'Pay with Stripe',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CurrencyTab extends StatelessWidget {
+  final String label;
+  final String sublabel;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _CurrencyTab({
+    required this.label,
+    required this.sublabel,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? color : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            children: [
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: selected ? Colors.white : AppColors.textSecondary,
+                ),
+              ),
+              Text(
+                sublabel,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: selected
+                      ? Colors.white.withValues(alpha: 0.85)
+                      : AppColors.textTertiary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
