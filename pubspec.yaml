@@ -71,6 +71,11 @@ dependencies:
   flutter_stripe: ^12.3.0
   webview_flutter: ^4.10.0
 
+  # Receipt & Sharing
+  pdf: ^3.11.1
+  printing: ^5.13.2
+  screenshot: ^3.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
