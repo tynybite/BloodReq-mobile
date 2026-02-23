@@ -386,8 +386,12 @@ class AuthProvider with ChangeNotifier {
       final response = await _api.post<Map<String, dynamic>>(
         ApiEndpoints.signUp,
         body: {
+          'full_name': fullName,
           'email': email,
           'password': password,
+          'phone_number': phoneNumber,
+          'blood_group': bloodGroup,
+          'country': country,
           'city': city,
           'gender': gender,
           if (area != null) 'area': area,
