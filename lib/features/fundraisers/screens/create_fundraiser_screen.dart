@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_theme.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/language_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../shared/utils/app_toast.dart';
@@ -59,7 +60,15 @@ class _CreateFundraiserScreenState extends State<CreateFundraiserScreen> {
   // ─── City Loading ───
   Future<void> _loadCities() async {
     setState(() => _loadingCities = true);
-    final response = await _api.get<Map<String, dynamic>>(ApiEndpoints.cities);
+
+    // Use the user's registered country so we fetch the correct cities
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
+    final country = user?.country ?? 'BD';
+
+    final response = await _api.get<Map<String, dynamic>>(
+      ApiEndpoints.cities,
+      queryParams: {'country': country},
+    );
     if (!mounted) return;
 
     if (response.success && response.data != null) {
@@ -69,7 +78,7 @@ class _CreateFundraiserScreenState extends State<CreateFundraiserScreen> {
         if (citiesList != null) {
           _cities = citiesList.map((e) => e as Map<String, dynamic>).toList();
           if (_cities.isNotEmpty) {
-            _selectedCity = _cities.first['name'] ?? 'Dhaka';
+            _selectedCity = _cities.first['name'] ?? '';
           }
         }
       });
@@ -234,8 +243,20 @@ class _CreateFundraiserScreenState extends State<CreateFundraiserScreen> {
 
   Future<void> _submit() async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
-      setState(() => _isSubmitting = true);
       final lang = Provider.of<LanguageProvider>(context, listen: false);
+
+      // Require at least one document or photo
+      if (_documents.isEmpty && _photos.isEmpty) {
+        if (mounted) {
+          AppToast.error(
+            context,
+            'Please upload at least one document or photo',
+          );
+        }
+        return;
+      }
+
+      setState(() => _isSubmitting = true);
 
       final data = _formKey.currentState!.value;
       final formData = Map<String, dynamic>.from(data);

@@ -193,7 +193,14 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   Future<void> _loadCities() async {
     setState(() => _loadingCities = true);
 
-    final response = await _api.get<Map<String, dynamic>>(ApiEndpoints.cities);
+    // Use the user's registered country so we fetch the correct cities
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
+    final country = user?.country ?? 'BD';
+
+    final response = await _api.get<Map<String, dynamic>>(
+      ApiEndpoints.cities,
+      queryParams: {'country': country},
+    );
     if (!mounted) return;
 
     if (response.success && response.data != null) {
@@ -203,7 +210,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
         if (citiesList != null) {
           _cities = citiesList.map((e) => e as Map<String, dynamic>).toList();
           if (_cities.isNotEmpty) {
-            _selectedCity = _cities.first['name'] ?? 'Dhaka';
+            _selectedCity = _cities.first['name'] ?? '';
           }
         }
       });
@@ -261,6 +268,10 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   bool _validateStep2() {
     if (_hospitalController.text.trim().isEmpty) {
       _showError('Please enter hospital name');
+      return false;
+    }
+    if (_medicalReport == null) {
+      _showError('Please upload a medical document / prescription');
       return false;
     }
     return true;
