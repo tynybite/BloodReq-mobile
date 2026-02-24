@@ -339,52 +339,59 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: context.scaffoldBg,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _previousStep,
-        ),
-        title: const Text('Request Blood'),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Text(
-                '${_currentStep + 1} of 2',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
+    return PopScope(
+      canPop: _currentStep == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _previousStep();
+      },
+      child: Scaffold(
+        backgroundColor: context.scaffoldBg,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _previousStep,
+          ),
+          title: const Text('Request Blood'),
+          centerTitle: true,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Text(
+                  '${_currentStep + 1} of 2',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Progress Indicator
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: StepIndicator(currentStep: _currentStep),
-          ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // Progress Indicator
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: StepIndicator(currentStep: _currentStep),
+            ),
 
-          // Pages
-          Expanded(
-            child: Form(
-              key: _formKey,
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [_buildStep1(isDark), _buildStep2(isDark)],
+            // Pages
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [_buildStep1(isDark), _buildStep2(isDark)],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -858,44 +865,50 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   }
 
   Widget _buildCityDropdown(bool isDark) {
-    return DropdownButtonFormField<String>(
-      initialValue: _cities.any((c) => c['name'] == _selectedCity)
-          ? _selectedCity
-          : null,
-      decoration: InputDecoration(
-        labelText: 'City',
-        prefixIcon: const Icon(Icons.location_city, size: 22),
-        filled: true,
-        fillColor: isDark
-            ? AppColors.surfaceVariantDark
-            : AppColors.surfaceVariant,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        suffixIcon: _loadingCities
-            ? const Padding(
-                padding: EdgeInsets.all(12),
-                child: SizedBox(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return DropdownMenu<String>(
+          initialSelection: _cities.any((c) => c['name'] == _selectedCity)
+              ? _selectedCity
+              : (_cities.isNotEmpty
+                    ? _cities.first['name'] as String
+                    : 'Dhaka'),
+          width: constraints.maxWidth,
+          enableFilter: true,
+          enableSearch: true,
+          label: const Text('City'),
+          leadingIcon: const Icon(Icons.location_city, size: 22),
+          trailingIcon: _loadingCities
+              ? const SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              )
-            : null,
-      ),
-      items: _cities.isEmpty
-          ? [const DropdownMenuItem(value: 'Dhaka', child: Text('Dhaka'))]
-          : _cities
-                .map(
-                  (c) => DropdownMenuItem(
-                    value: c['name'] as String,
-                    child: Text(c['name'] as String),
-                  ),
                 )
-                .toList(),
-      onChanged: (v) {
-        if (v != null) setState(() => _selectedCity = v);
+              : null,
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: isDark
+                ? AppColors.surfaceVariantDark
+                : AppColors.surfaceVariant,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          dropdownMenuEntries: _cities.isEmpty
+              ? [const DropdownMenuEntry(value: 'Dhaka', label: 'Dhaka')]
+              : _cities
+                    .map(
+                      (c) => DropdownMenuEntry(
+                        value: c['name'] as String,
+                        label: c['name'] as String,
+                      ),
+                    )
+                    .toList(),
+          onSelected: (v) {
+            if (v != null) setState(() => _selectedCity = v);
+          },
+        );
       },
     );
   }

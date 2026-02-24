@@ -174,6 +174,8 @@ class _CreateFundraiserScreenState extends State<CreateFundraiserScreen> {
                         prefixIcon: const Icon(Icons.attach_money),
                       ),
                       keyboardType: TextInputType.number,
+                      valueTransformer: (val) =>
+                          val != null ? num.tryParse(val.toString()) : null,
                       validator: FormBuilderValidators.compose([
                         FormBuilderValidators.required(),
                         FormBuilderValidators.numeric(),
