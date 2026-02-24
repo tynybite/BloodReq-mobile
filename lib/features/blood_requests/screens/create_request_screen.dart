@@ -244,6 +244,12 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
       _showError('Please enter contact number');
       return false;
     }
+    // Strip non-digit characters for length check (handles +880, spaces, dashes)
+    final digitsOnly = _contactController.text.replaceAll(RegExp(r'[^\d]'), '');
+    if (digitsOnly.length < 10) {
+      _showError('Phone number must be at least 10 digits');
+      return false;
+    }
     final units = int.tryParse(_unitsController.text);
     if (units == null || units < 1) {
       _showError('Please enter valid units');
@@ -865,51 +871,71 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   }
 
   Widget _buildCityDropdown(bool isDark) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return DropdownMenu<String>(
-          initialSelection: _cities.any((c) => c['name'] == _selectedCity)
-              ? _selectedCity
-              : (_cities.isNotEmpty
-                    ? _cities.first['name'] as String
-                    : 'Dhaka'),
-          width: constraints.maxWidth,
-          enableFilter: true,
-          enableSearch: true,
-          label: const Text('City'),
-          leadingIcon: const Icon(Icons.location_city, size: 22),
-          trailingIcon: _loadingCities
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : null,
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: isDark
-                ? AppColors.surfaceVariantDark
-                : AppColors.surfaceVariant,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+    return GestureDetector(
+      onTap: () => _showCitySearchSheet(isDark),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.surfaceVariantDark
+              : AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.location_city, color: AppColors.primary, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'City',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _selectedCity,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: context.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          dropdownMenuEntries: _cities.isEmpty
-              ? [const DropdownMenuEntry(value: 'Dhaka', label: 'Dhaka')]
-              : _cities
-                    .map(
-                      (c) => DropdownMenuEntry(
-                        value: c['name'] as String,
-                        label: c['name'] as String,
-                      ),
-                    )
-                    .toList(),
-          onSelected: (v) {
-            if (v != null) setState(() => _selectedCity = v);
-          },
-        );
-      },
+            if (_loadingCities)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Icon(Icons.keyboard_arrow_down, color: AppColors.textTertiary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCitySearchSheet(bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CitySearchSheet(
+        cities: _cities,
+        selectedCity: _selectedCity,
+        isDark: isDark,
+        onSelect: (city) {
+          setState(() => _selectedCity = city);
+          Navigator.pop(context);
+        },
+      ),
     );
   }
 
@@ -1123,6 +1149,162 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
 // ─────────────────────────────────────────────────────────────
 // HELPER WIDGETS
 // ─────────────────────────────────────────────────────────────
+
+class _CitySearchSheet extends StatefulWidget {
+  final List<Map<String, dynamic>> cities;
+  final String selectedCity;
+  final bool isDark;
+  final ValueChanged<String> onSelect;
+
+  const _CitySearchSheet({
+    required this.cities,
+    required this.selectedCity,
+    required this.isDark,
+    required this.onSelect,
+  });
+
+  @override
+  State<_CitySearchSheet> createState() => _CitySearchSheetState();
+}
+
+class _CitySearchSheetState extends State<_CitySearchSheet> {
+  final _searchController = TextEditingController();
+  List<Map<String, dynamic>> _filtered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.cities;
+    _searchController.addListener(_onSearch);
+  }
+
+  void _onSearch() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filtered = widget.cities;
+      } else {
+        _filtered = widget.cities
+            .where((c) => (c['name'] as String).toLowerCase().contains(query))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.65,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // Title
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Row(
+              children: [
+                Icon(Icons.location_city, color: AppColors.primary, size: 22),
+                const SizedBox(width: 10),
+                const Text(
+                  'Select City',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          // Search field
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Search city...',
+                prefixIcon: const Icon(Icons.search, size: 22),
+                filled: true,
+                fillColor: isDark
+                    ? AppColors.surfaceVariantDark
+                    : AppColors.surfaceVariant,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          // City list
+          Expanded(
+            child: _filtered.isEmpty
+                ? Center(
+                    child: Text(
+                      'No cities found',
+                      style: TextStyle(color: AppColors.textTertiary),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    itemCount: _filtered.length,
+                    itemBuilder: (context, index) {
+                      final city = _filtered[index]['name'] as String;
+                      final isSelected = city == widget.selectedCity;
+                      return ListTile(
+                        leading: Icon(
+                          Icons.location_on_outlined,
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.textTertiary,
+                          size: 20,
+                        ),
+                        title: Text(
+                          city,
+                          style: TextStyle(
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSelected
+                                ? AppColors.primary
+                                : context.textPrimary,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? Icon(
+                                Icons.check_circle,
+                                color: AppColors.primary,
+                                size: 22,
+                              )
+                            : null,
+                        onTap: () => widget.onSelect(city),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _SectionCard extends StatelessWidget {
   final IconData icon;
