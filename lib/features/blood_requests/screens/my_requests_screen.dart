@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
+import '../../../shared/utils/currency_helper.dart';
 import '../../../shared/widgets/blob_background.dart';
 
 class MyRequestsScreen extends StatelessWidget {
@@ -650,7 +651,7 @@ class _FundraiserCard extends StatelessWidget {
                           children: [
                             TextSpan(
                               text:
-                                  '৳${_formatAmount(fundraiser['amount_raised'] ?? 0)}',
+                                  '${getCurrencySymbol(context)}${_formatAmount(fundraiser['amount_raised'] ?? 0)}',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.success,
@@ -668,7 +669,7 @@ class _FundraiserCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '৳${_formatAmount(fundraiser['amount_needed'] ?? 0)} goal',
+                        '${getCurrencySymbol(context)}${_formatAmount(fundraiser['amount_needed'] ?? 0)} goal',
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,

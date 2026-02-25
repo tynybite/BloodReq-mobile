@@ -314,6 +314,20 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
 
     setState(() => _isLoading = true);
 
+    // Upload medical report first
+    String? documentUrl;
+    if (_medicalReport != null) {
+      documentUrl = await _api.uploadFile(
+        _medicalReport!.path,
+        folder: 'medical-documents',
+      );
+      if (documentUrl == null && mounted) {
+        setState(() => _isLoading = false);
+        _showError('Failed to upload medical document. Please try again.');
+        return;
+      }
+    }
+
     final response = await _api.post(
       ApiEndpoints.bloodRequests,
       body: {
@@ -327,6 +341,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
         'notes': _notesController.text.trim(),
         'required_date': _selectedDate.toIso8601String(),
         'patient_gender': _selectedGender,
+        if (documentUrl != null) 'medical_document_url': documentUrl,
       },
     );
 

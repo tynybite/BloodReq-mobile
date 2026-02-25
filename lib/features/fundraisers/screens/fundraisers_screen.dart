@@ -10,6 +10,7 @@ import '../../../core/providers/language_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/fundraiser_cache_service.dart';
+import '../../../shared/utils/currency_helper.dart';
 import '../../../shared/widgets/native_ad_widget.dart';
 
 class FundraisersScreen extends StatefulWidget {
@@ -287,7 +288,7 @@ class _FundraisersScreenState extends State<FundraisersScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              '৳${_formatAmount(totalRaised)}',
+                              '${getCurrencySymbol(context)}${_formatAmount(totalRaised)}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
@@ -1042,7 +1043,7 @@ class _PremiumFundraiserCard extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            '৳${_formatAmount(fundraiser['amount_raised'])}',
+                            '${getCurrencySymbol(context)}${_formatAmount(fundraiser['amount_raised'])}',
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               color: progressColor,
@@ -1077,7 +1078,7 @@ class _PremiumFundraiserCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '৳${_formatAmount(fundraiser['amount_needed'])}',
+                              '${getCurrencySymbol(context)}${_formatAmount(fundraiser['amount_needed'])}',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,

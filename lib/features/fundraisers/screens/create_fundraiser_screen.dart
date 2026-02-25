@@ -258,12 +258,52 @@ class _CreateFundraiserScreenState extends State<CreateFundraiserScreen> {
 
       setState(() => _isSubmitting = true);
 
+      // Upload all documents and photos first
+      final List<Map<String, dynamic>> uploadedDocs = [];
+
+      for (final doc in _documents) {
+        if (doc.path != null) {
+          final url = await _api.uploadFile(
+            doc.path!,
+            folder: 'fundraiser-documents',
+          );
+          if (url != null) {
+            uploadedDocs.add({
+              'url': url,
+              'type': doc.extension ?? 'unknown',
+              'name': doc.name,
+            });
+          }
+        }
+      }
+
+      for (final photo in _photos) {
+        final url = await _api.uploadFile(
+          photo.path,
+          folder: 'fundraiser-documents',
+        );
+        if (url != null) {
+          uploadedDocs.add({'url': url, 'type': 'image', 'name': photo.name});
+        }
+      }
+
+      // If none uploaded successfully, show error
+      if (uploadedDocs.isEmpty && mounted) {
+        setState(() => _isSubmitting = false);
+        AppToast.error(
+          context,
+          'Failed to upload documents. Please try again.',
+        );
+        return;
+      }
+
       final data = _formKey.currentState!.value;
       final formData = Map<String, dynamic>.from(data);
 
       // Add hospital and location from our controllers
       formData['hospital'] = _hospitalController.text;
       formData['location'] = _selectedCity;
+      formData['documents'] = uploadedDocs;
 
       if (formData['deadline'] != null) {
         formData['deadline'] = (formData['deadline'] as DateTime)

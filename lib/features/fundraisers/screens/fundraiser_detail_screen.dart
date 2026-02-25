@@ -7,6 +7,7 @@ import '../../../core/services/api_service.dart';
 import '../../../core/services/bkash_service.dart';
 import '../../../core/services/stripe_service.dart';
 import '../../../shared/utils/app_toast.dart';
+import '../../../shared/utils/currency_helper.dart';
 import '../../../core/providers/language_provider.dart';
 
 class FundraiserDetailScreen extends StatefulWidget {
@@ -242,7 +243,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '৳${_formatAmount(_fundraiser!['amount_raised'] ?? 0)}',
+                                '${getCurrencySymbol(context)}${_formatAmount(_fundraiser!['amount_raised'] ?? 0)}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 24,
@@ -250,7 +251,7 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                                 ),
                               ),
                               Text(
-                                '${lang.getText('raised_of')} ৳${_formatAmount(_fundraiser!['amount_needed'] ?? 0)}',
+                                '${lang.getText('raised_of')} ${getCurrencySymbol(context)}${_formatAmount(_fundraiser!['amount_needed'] ?? 0)}',
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 13,
@@ -354,8 +355,8 @@ class _FundraiserDetailScreenState extends State<FundraiserDetailScreen> {
                 onPressed: () {
                   Share.share(
                     'Support this fundraiser: ${_fundraiser!['title']}\n'
-                    'Goal: ৳${_fundraiser!['amount_needed']}\n'
-                    'Raised: ৳${_fundraiser!['amount_raised']}\n\n'
+                    'Goal: ${getCurrencySymbol(context)}${_fundraiser!['amount_needed']}\n'
+                    'Raised: ${getCurrencySymbol(context)}${_fundraiser!['amount_raised']}\n\n'
                     'Read more and donate on BloodReq!',
                   );
                 },

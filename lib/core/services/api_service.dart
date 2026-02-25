@@ -339,6 +339,39 @@ class ApiService {
     }
   }
 
+  /// Upload a file via multipart/form-data and return the URL
+  Future<String?> uploadFile(
+    String filePath, {
+    String folder = 'uploads',
+  }) async {
+    try {
+      final uri = Uri.parse('${ApiConfig.baseUrl}/upload/image');
+      final token = await _getValidToken();
+
+      final request = http.MultipartRequest('POST', uri);
+      request.headers['Authorization'] = 'Bearer ${token ?? ''}';
+      request.fields['folder'] = folder;
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 60),
+      );
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        if (json['success'] == true && json['data'] != null) {
+          return json['data']['url'] as String?;
+        }
+      }
+      debugPrint('Upload failed: ${response.statusCode} ${response.body}');
+      return null;
+    } catch (e) {
+      debugPrint('Upload file error: $e');
+      return null;
+    }
+  }
+
   /// Make a raw HTTP GET request to external APIs (no auth headers)
   Future<Map<String, dynamic>?> httpGet(Uri url) async {
     try {
