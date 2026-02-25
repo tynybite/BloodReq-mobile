@@ -29,11 +29,25 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _unifiedFeed = [];
   bool _isLoading = true;
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadFeed();
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final response = await ApiService().get<dynamic>('/notifications');
+    if (response.success &&
+        response.data != null &&
+        response.data is Map<String, dynamic>) {
+      final data = response.data as Map<String, dynamic>;
+      if (mounted) {
+        setState(() => _unreadCount = data['unread_count'] as int? ?? 0);
+      }
+    }
   }
 
   int _calculateTotalItemCount() {
@@ -119,7 +133,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: context.scaffoldBg,
       body: RefreshIndicator(
-        onRefresh: _loadFeed,
+        onRefresh: () async {
+          await _loadFeed();
+          _loadUnreadCount();
+        },
         child: NotificationListener<UserScrollNotification>(
           onNotification: (notification) {
             final scrollProvider = Provider.of<ScrollControlProvider>(
@@ -244,54 +261,41 @@ class _HomeScreenState extends State<HomeScreen> {
                                 icon: const Icon(Icons.notifications_outlined),
                                 color: context.textSecondary,
                                 iconSize: 22,
-                                onPressed: () => context.push('/notifications'),
+                                onPressed: () {
+                                  context.push('/notifications').then((_) {
+                                    _loadUnreadCount();
+                                  });
+                                },
                               ),
                             ),
                             // Unread Badge
-                            FutureBuilder<ApiResponse<dynamic>>(
-                              future: ApiService().get('/notifications'),
-                              builder: (context, snapshot) {
-                                if (!snapshot.hasData ||
-                                    !snapshot.data!.success ||
-                                    snapshot.data!.data == null) {
-                                  return const SizedBox.shrink();
-                                }
-
-                                final data = snapshot.data!.data;
-                                if (data is! Map<String, dynamic> ||
-                                    !data.containsKey('unread_count')) {
-                                  return const SizedBox.shrink();
-                                }
-
-                                final count = data['unread_count'] as int? ?? 0;
-                                if (count <= 0) return const SizedBox.shrink();
-
-                                return Positioned(
-                                  top: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.error,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 16,
-                                      minHeight: 16,
-                                    ),
-                                    child: Text(
-                                      count > 9 ? '9+' : count.toString(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
+                            if (_unreadCount > 0)
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.error,
+                                    shape: BoxShape.circle,
                                   ),
-                                );
-                              },
-                            ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  ),
+                                  child: Text(
+                                    _unreadCount > 9
+                                        ? '9+'
+                                        : _unreadCount.toString(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ],
